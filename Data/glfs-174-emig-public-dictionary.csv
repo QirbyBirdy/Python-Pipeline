@@ -1,0 +1,29 @@
+column,description,type,choices
+hhid,Household ID,str13,
+emig,Emigrant ID,byte,
+weight,Sampling weight,double,
+stratum,Stratum,str4,
+psu,Primary Sampling Unit,str7,
+block,Rotation block,byte,
+domain,Estimation domain,byte,domain
+quarter,Quarter,int,
+week,Fieldwork week,byte,
+region,Region,str2,
+area,Coast/Interior,byte,area
+zone,Urban/Rural,byte,zone
+psu_centroid_lat,(mean) geolat_hq,float,
+psu_centroid_long,(mean) geolong_hq,float,
+q7_04,7.04. What is 's relation to the head of THIS household?,byte,Erelation
+q7_05,Sex,byte,Sex
+q7_06,Age,byte,
+q7_07,7.07. What is the highest level of education that  COMPLETED?,byte,Leducation
+q7_08,7.08. What did ... study?,str51,
+q7_09,7.09. In what year did ... move out of Guyana?,int,
+q7_10,7.10. In what period did ... move out of Guyana?,byte,Period
+q7_11,7.11. What was the MOST IMPORTANT reason for ... moving out of Guyana?,byte,Moving
+q7_12,7.12. In what country is ... living now?,byte,Country
+q7_13,7.13. Had ... ever worked before leaving Guyana?,byte,yesno
+q7_14,7.14. What was ... employment status in the LAST JOB SHE/HE HAD IN GUYANA?,byte,Category
+q7_15,7.15. What kind of work did ... perform in his/her LAST JOB IN GUYANA (job title,str65,
+q7_16,7.16. What is ... current MAIN activity?,byte,Mactivity
+q7_17,7.17. Is ... currently working?,byte,yesnodont

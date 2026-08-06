@@ -1,0 +1,178 @@
+column,description,type,choices
+hhid,Household ID,str13,
+member,Member ID,byte,
+panelid,Unique member ID (for panel analyses),int,
+weight,Sampling weight,double,
+stratum,Stratum,str4,
+psu,Primary Sampling Unit,str7,
+block,Rotation block,byte,
+domain,Estimation domain,byte,domain
+quarter,Quarter,int,
+week,Fieldwork week,byte,
+region,Region,str2,
+area,Coast/Interior,byte,area
+zone,Urban/Rural,byte,zone
+psu_centroid_lat,(mean) geolat_hq,float,
+psu_centroid_long,(mean) geolong_hq,float,
+q1_02,Relation to HH head,byte,Relation
+q1_03,Sex,byte,Sex
+q1_04,Age,byte,
+q1_05,Marital status,byte,Marital
+q1_06,Ethnic group,byte,Ethnic
+q1_07,Country of birth,byte,Born
+q1_08,How many years have you been residing in Guyana on a continuous basis?,byte,
+q1_09,In which region was your mother living when you were born?,byte,Region
+q1_10,Where were you living five years ago?,byte,Five
+q1_11,Have you EVER attended school?,byte,yesno
+q1_12,Are you now enrolled in a school or in an educational institution?,byte,yesno
+q1_13,What is the highest level of education that you have ATTENDED?,byte,Educ
+q1_14,What class did you COMPLETE?,byte,Class
+q1_15,What is the highest post-secondary level/degree that you have COMPLETED?,byte,Level
+q1_16,What is the highest examination that you have passed?,byte,Exam
+q2_01,In the LAST 12 MONTHS have you received training for any occupation (for example,byte,yesno
+q2_02,In what subject was your last training?,str113,
+q2_03,Where did you acquire MOST of this training?,byte,Train
+q2_04,"In the LAST 7 DAYS, did you do any work for a wage, salary or tips EVEN IF ONLY ",byte,yesno
+q2_05,"In the LAST 7 DAYS, did you run or do any kind of business or farming, alone or ",byte,yesno
+q2_06,In the LAST 7 DAYS did you do any of the following activities EVEN IF ONLY FOR O,byte,
+q2_07,"In the LAST 7 DAYS, did you help unpaid in a business or farm owned by a househo",byte,yesno
+q2_08,"Was this work in agriculture, livestock rearing or fishing?",byte,yesno
+q2_09,"IN GENERAL, are the products obtained from this activity for sale/ barter or are",byte,obtain
+q2_10,"In the LAST 7 DAYS, were you absent from a paid job or a business, including a h",byte,yesno
+q2_11,Why were you absent from your work in the LAST 7 DAYS?,byte,Absent
+q2_12,"Including the time that you have been absent, will you return to that same work
+",byte,return
+q2_13,Do you continue receiving an income from your job during this absence?,byte,yesno
+q2_14,"During the LAST 30 DAYS, did you look for a job or tried to start a business?",byte,Want
+q2_15,What did you MAINLY do in the LAST 30 DAYS to find a job or to try to start a bu,byte,Mainly
+q2_16,"Even though you did not look for work in the LAST 30 DAYS, do you want to work f",byte,Main
+q2_17,What was the MAIN reason why you did not seek work or try to start a business du,byte,Available
+q2_18,How long have you been without work and trying to find a job or start a business,byte,Long
+q2_19,"If an opportunity to work for pay or to start a business became available, could",byte,Start
+q2_20,What is the MAIN reason why you do not want or you are not available to work?,byte,NotAvailable
+q3_01,In the LAST 7 DAYS did you have more than one job or economic activity?,byte,yesno
+q3_02,What is the MAIN reason for you holding more than one job?,byte,Holding
+q3_03,How many hours do you USUALLY work PER WEEK in your MAIN JOB (the one that takes,byte,
+q3_04,How many hours do you USUALLY work per week in your other jobs?,byte,
+q3_05,Total hours USUALLY worked per week in ALL jobs,int,
+q3_06,What is the MAIN reason why you USUALLY work less than 40 hours per week?,byte,H40
+q3_07_1,Monday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_2,Tuesday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_3,Wednesday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_4,Thursday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_5,Friday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_6,Saturday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_07_7,Sunday: hours ACTUALLY worked in Main job in last 7 days,byte,
+q3_08,Hours ACTUALLY worked in OTHER jobs in last 7 days,byte,
+q3_09,Total hours ACTUALLY worked in MAIN job in last 7 days,int,
+q3_10,Total hours ACTUALLY worked in ALL jobs in last 7 days,int,
+q3_11,Would you want to work more hours for pay or profit than you USUALLY work?,byte,yesno
+q3_12,"If an opportunity for additional work became available, could you start working ",byte,yesno
+q3_13,Have you ever TRIED to work more hours in this job or in another job?,byte,yesno
+q3_14,When was the LAST TIME you tried to do this?,byte,LastTime
+q3_15,What did you MAINLY do when you tried to work more hours?,byte,Addition
+q3_15b,Oher specify,str85,
+q3_16,Status in employment,byte,Q3_14
+q3_17,Are you a farmer?,byte,yesno
+q3_18,Are you working on the basis of a written contract or is it on the basis of a ve,byte,Wcontract
+q3_19,Is your contract or agreement of a limited time duration or is it permanent with,byte,Cagree
+q3_20,What is the duration of your contract or agreement?,byte,Dcontrat
+q3_21,How long have you been employed by your current employer based on a fixed term c,byte,Cemploy
+q3_22,Do you benefit from paid annual leave?,byte,yesno
+q3_23,Do you benefit from compensation for unused leave?,byte,yesnodont
+q3_24,Do you benefit from paid sick leave in case of illness?,byte,yesno
+q3_25,"If you had a baby, would you benefit from maternity/paternity leave?",byte,Baby
+q3_26,Does your employer deduct contributions for the NIS (National Insurance Scheme)?,byte,yesno
+q3_27,Are you a member of any union or professional association or employers associati,byte,yesno
+q3_28,What kind of accounts or records does your enterprise keep?,byte,Accounts
+q3_29,"Are you contributing BY YOURSELF to any social security scheme, such as (
+)?",str3,
+q3_30,"What is the name of the company, shop or place where you work?",str89,
+q3_31,What are the MAIN products or services produced at your workplace?,str179,
+isic_code,ISIC code,str4,
+q3_32,What is your job?,str123,
+q3_33,What are your most important activities or duties?,str261,
+isco_code,ISCO code,str5,
+q3_34,What is the type of ownership of your business/place where you are employed?,byte,Ownership
+q3_35,"Is your business or the enterprise in wich you work registered in any national, ",byte,Registered
+q3_36,"Where is your business or the enterprise in which you work registered, or in the",str9,
+q3_37,Where is your business or the enterprise in which you work located?,byte,Located
+q3_38,How many persons (including yourself) USUALLY work in the establishment or busin,byte,Mpersons
+q3_39,How many of these persons are family members of the business owner?,byte,Fmembers
+q3_40,How long ago did you start working in this enterprise / business / for this empl,byte,Sworking
+q3_41,What is your MAIN source of financial support?,byte,Msource
+q4_01,How long ago have you been without work and seeking for work?,byte,Wwork
+q4_02,Have you ever worked or had a job?,byte,yesno
+q4_03,What is the MAIN reason why you stopped working?,byte,Mreason
+q4_04,How many hours per week did you USUALLY work in your last job?,byte,
+q4_05,What was your employment status in your LAST JOB?,byte,EmpStat
+q4_06,Were you a farmer in your LAST JOB?,byte,yesno
+q4_07,What type of worker were you in your last job?,byte,Tworker
+q4_08,In what country was this last job?,byte,Born
+q4_09,What is your MAIN source of financial support?,byte,Financial
+q5_01,To which of the following groups do you belong?,byte,Ldays
+q5_02,"Have you ever worked, either for others or in your own business?",byte,yesno
+q5_03a,How long ago did you stop working? (months),byte,
+q5_03b,How long ago did you stop working? (years),byte,
+q5_04,What was your employment status in your last job?,byte,EmpStat
+q5_05,Were you a farmer in your LAST JOB?,byte,yesno
+q5_06,In what country was this last job?,byte,Born
+q5_07,What was your MAIN source of financial support during the LAST 7 DAYS?,byte,Msfinancial
+q6_01,Exact income: income from Main job IN THE LAST MONTH IN TERMS OF NET salary,long,
+q6_01b,Income bracket: income from Main job IN THE LAST MONTH IN TERMS OF NET salary,byte,Card3
+q6_02a,"Received comissions, benefits, provisions in the last month in Main job",byte,yesno
+q6_02b,Received overtime pay (NET) in the last month in Main job,byte,yesno
+q6_02c,Received travel/other allowances in the last month in Main job,byte,yesno
+q6_02d,Received bonus in the last month in Main job,byte,yesno
+q6_02e,Received special holiday pay in the last month in Main job,byte,yesno
+q6_02f,"Received job related Government transfers (accident, illness, maternity) in the ",byte,yesno
+q6_03a,Received food and drinks as compensations in kind in the last month in Main job,byte,yesno
+q6_03b,Received housing and related services as compensations in kind in the last month,byte,yesno
+q6_03c,Received health care as compensations in kind in the last month in Main job,byte,yesno
+q6_03d,"Received transportation (vehicle, gas, tolls) as compensations in kind in the la",byte,yesno
+q6_03e,Received clothes as compensations in kind in the last month in Main job,byte,yesno
+q6_03f,Received nurseries or child care as compensations in kind in the last month in M,byte,yesno
+q6_03g,Received education for children as compensations in kind in the last month in Ma,byte,yesno
+q6_03h,Received products or services of the enterprise you work for as compensations in,byte,yesno
+q6_03i,Received any other type of in-kind pay as compensations in kind in the last mont,byte,yesno
+q6_04a,"Comissions, benefits, provisions: income in the last month in Main job",long,
+q6_04b,Overtime pay (NET): income in the last month in Main job,long,
+q6_04c,Travel/other allowances: income in the last month in Main job,long,
+q6_04d,Bonus: income in the last month in Main job,long,
+q6_04e,Special holiday: income in the last month in Main job,int,
+q6_04f,Job related Government transfers: income in the last month in Main job,long,
+q6_05a,Value of food and drinks received in the last month in Main job,long,
+q6_05b,Value of housing and related services received in the last month in Main job,long,
+q6_05c,Value of health care received in the last month in Main job,long,
+q6_05d,"Value of transportation (vehicle, gas, tolls) received in the last month in Main",long,
+q6_05e,Value of cothes received in the last month in Main job,int,
+q6_05f,Value of nurseries or child care received in the last month in Main job,byte,
+q6_05g,Value of education for children received in the last month in Main job,int,
+q6_05h,Value of products or services of the enterprise you work for received in the las,long,
+q6_05i,Value of any other type of in-kind pay received in the last month in Main job,long,
+q6_06,Exact income: cash amount withdrawn from business in THE LAST MONTH - Main job,long,
+q6_06b,Income bracket: cash amount withdrawn from business in THE LAST MONTH - Main job,byte,Card3
+q6_07,Products or services from business used to consume at home in THE LAST MONTH,long,
+q6_08,Foods from own production consumed at home in THE LAST MONTH,byte,yesno
+q6_09,Value of foods from own production consumed at home in THE LAST MONTH,long,
+q6_10,Income from OTHER jobs IN THE LAST MONTH,long,
+q6_11,Exact income: NIS pension in the last month,long,
+q6_12,Exact income: Old age pension in the last month,long,
+q6_13,Exact income: Service pension in the last month,long,
+q6_11b,Income bracket: NIS pension in the last month,byte,Card3
+q6_12b,Income bracket: Old age pension in the last month,byte,Card3
+q6_13b,Income bracket: Service pension in the last month,byte,Card3
+q6_14,Income for survivors benefit in the last month,long,
+q6_15,"Income from public assistance in the last month (welfare grants, disability gran",long,
+q6_16,"Income from rent of a house, land or other property in last 3 months",long,
+q6_17,"Income from sale of a house, land or other property in last 3 months",long,
+q6_18,"Income from alimony, maintenance or child support in the last 6 months",long,
+q6_19,Income from friends or relatives out of this household living in Guyana in the l,long,
+q6_20a,Income (GYD) from relatives or friends living abroad in the last 6 months,long,
+q6_20b,Income (US$) from relatives or friends living abroad in the last 6 months,long,
+q6_21,Income from financial investments in the las 12 months,long,
+q6_22,Any other income in the last 12 moths,long,
+q6_23,Received products from relatives/friends living abroad in the las 6 months,byte,yesno
+q6_24a,Value (GYD) of products from relatives/friends living abroad in the las 6 months,long,
+q6_24b,Value (US$) of products from relatives/friends living abroad in the las 6 months,long,
+q6_25,Were the questions answered by the individual in question?,byte,yesno

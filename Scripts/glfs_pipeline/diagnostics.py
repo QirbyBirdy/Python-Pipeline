@@ -13,6 +13,9 @@ def column_diagnostics(df: pd.DataFrame, dictionary: pd.DataFrame) -> pd.DataFra
         series = df[col]
         n_missing = int(series.isna().sum())
         top_counts = series.value_counts(dropna=True).head(5)
+        label_set = label_set_by_column.get(col, "")
+        if pd.isna(label_set):
+            label_set = ""
         rows.append(
             {
                 "column": col,
@@ -20,7 +23,7 @@ def column_diagnostics(df: pd.DataFrame, dictionary: pd.DataFrame) -> pd.DataFra
                 "pct_missing": round(100 * n_missing / n_rows, 2) if n_rows else 0.0,
                 "n_unique": int(series.nunique(dropna=True)),
                 "top_values": "; ".join(f"{val}={cnt}" for val, cnt in top_counts.items()),
-                "label_set": label_set_by_column.get(col, "") or "",
+                "label_set": label_set,
             }
         )
     return pd.DataFrame(rows)

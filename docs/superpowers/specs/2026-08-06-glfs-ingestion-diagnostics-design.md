@@ -20,24 +20,26 @@ stages: ingest → diagnostics → problem inventory. The two datasets are relat
 
 ## File layout
 
-```
-config.py                          # path constants (pathlib), Outputs/ subdirs auto-created
+```text
 requirements.txt                   # pandas, pyarrow
-glfs_pipeline/
-  __init__.py
-  ingest.py                        # raw CSV -> validated -> interim parquet
-  diagnostics.py                   # interim parquet -> per-column diagnostics
-  problem_inventory.py             # diagnostics -> drafted markdown inventory
-run_pipeline.py                    # CLI entrypoint, runs both datasets through all 3 stages
+Scripts/
+  config.py                        # path constants (pathlib), Outputs/ subdirs auto-created
+  glfs_pipeline/
+    __init__.py
+    ingest.py                      # raw CSV -> validated -> interim parquet
+    diagnostics.py                 # interim parquet -> per-column diagnostics
+    problem_inventory.py           # diagnostics -> drafted markdown inventory
+  run_pipeline.py                  # CLI entrypoint, runs both datasets through all 3 stages
 Outputs/
   interim/      ind_raw.parquet, emig_raw.parquet
   diagnostics/  ind_diagnostics.csv, ind_report.md, emig_diagnostics.csv, emig_report.md
   problem_inventory/  ind_problem_inventory.md, emig_problem_inventory.md
 ```
 
-`Scripts/` (pre-existing, currently empty) is superseded by `glfs_pipeline/` +
-`run_pipeline.py` at the project root — the package-style layout doesn't fit
-inside a flat `Scripts/` folder, so it is removed as part of this work.
+`Scripts/` (pre-existing, currently empty) is kept and used as the container
+for `config.py`, the `glfs_pipeline/` package, and `run_pipeline.py` — all
+pipeline code lives under `Scripts/`, all pipeline output under `Outputs/`,
+and raw data under `Data/`.
 
 ## Components
 
@@ -66,8 +68,14 @@ dtype-stable working copy that later stages read instead of re-parsing the CSV.
 
 For each dataset, computes a per-column diagnostics table:
 - dtype, % missing, # unique values, top 5 value counts
-- for columns with a documented `choices` set in the dictionary: which observed
-  values fall outside that set (flagged, not corrected)
+- the dictionary's `choices` value for that column, reported as-is
+
+Note: the dictionary's `choices` column is a Stata value-label-*set name*
+(e.g. `yesno`, `Sex`, `Educ`), not an enumerated list of valid codes — and the
+`ind` dataset has no accompanying `.dta` file to resolve real label mappings
+from. There is nothing to validate observed values against, so this stage
+reports the label-set name for context only and makes no in/out-of-range
+judgment.
 
 Writes the table to `Outputs/diagnostics/<name>_diagnostics.csv` and renders a
 human-readable summary to `Outputs/diagnostics/<name>_report.md` (dataset shape,
@@ -79,10 +87,9 @@ Reads the diagnostics CSV and applies fixed heuristics to draft a severity-ranke
 markdown inventory — a starting point for manual review, not a final judgment:
 
 | Condition | Severity |
-|---|---|
+| --- | --- |
 | >50% missing | High |
 | constant / single-value column | Medium |
-| values outside dictionary's documented codes | High |
 | everything else | Informational |
 
 Writes `Outputs/problem_inventory/<name>_problem_inventory.md`. This stage is

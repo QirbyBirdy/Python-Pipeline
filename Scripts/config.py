@@ -11,6 +11,7 @@ OUTPUTS_DIR = PROJECT_ROOT / "Outputs"
 INTERIM_DIR = OUTPUTS_DIR / "interim"
 DIAGNOSTICS_DIR = OUTPUTS_DIR / "diagnostics"
 PROBLEM_INVENTORY_DIR = OUTPUTS_DIR / "problem_inventory"
+LOGS_DIR = OUTPUTS_DIR / "logs"
 
 DATASETS = {
     "ind": {
@@ -20,6 +21,7 @@ DATASETS = {
         "diagnostics_csv": DIAGNOSTICS_DIR / "ind_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "ind_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "ind_problem_inventory.md",
+        "ingest_log": LOGS_DIR / "ind_ingest.log",
     },
     "emig": {
         "csv": DATA_DIR / "glfs-174-emig-public.csv",
@@ -28,8 +30,18 @@ DATASETS = {
         "diagnostics_csv": DIAGNOSTICS_DIR / "emig_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "emig_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "emig_problem_inventory.md",
+        "ingest_log": LOGS_DIR / "emig_ingest.log",
     },
 }
 
-for _dir in (INTERIM_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR):
+# Expected row counts from the source documentation (Data/glfs-q4-2017-methodological-report.pdf,
+# "Introduction", p.3): the Q4 2017 GLFS "visited a probability sample of 3,783 households and
+# 13,853 individuals". The report does not state a headline household/individual count for the
+# emigration module specifically, so "emig" has no documented expectation to check against --
+# ingest.py logs its observed counts for the record but does not compare them to anything.
+EXPECTED_COUNTS = {
+    "ind": {"households": 3783, "individuals": 13853},
+}
+
+for _dir in (INTERIM_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR):
     _dir.mkdir(parents=True, exist_ok=True)

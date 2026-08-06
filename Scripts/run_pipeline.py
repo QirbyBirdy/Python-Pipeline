@@ -21,7 +21,7 @@ def run(dataset: str) -> None:
     names = list(config.DATASETS) if dataset == "both" else [dataset]
     for name in names:
         print(f"[{name}] ingesting...")
-        ingest(name, config.DATASETS)
+        ingest(name, config.DATASETS, config.EXPECTED_COUNTS)
         print(f"[{name}] running diagnostics...")
         diagnose(name, config.DATASETS)
         print(f"[{name}] drafting problem inventory...")

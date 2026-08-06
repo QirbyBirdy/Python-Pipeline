@@ -1,0 +1,176 @@
+column,dtype,pct_missing,n_unique,top_values,label_set
+hhid,str,0.0,3783,02 0094 160 7=17; 05 0078 022 4=14; 10 0218 286 4=14; 03 0147 012 6=13; 03 0547 011 2=13,
+member,str,0.0,17,1=3783; 2=3234; 3=2507; 4=1836; 5=1121,
+panelid,str,0.0,18,101=3274; 102=2854; 103=2347; 104=1850; 105=1285,
+weight,str,0.0,338,56.6694173942012=96; 22.99743759949596=84; 24.88568279457885=78; 24.22582776676932=70; 20.76033901435086=69,
+stratum,str,0.0,13,04 0=2050; 03 0=2013; 04 1=2009; 06 0=1670; 05 0=1561,
+psu,str,0.0,340,10 0218=84; 08 0019=78; 02 0245=69; 01 0057=68; 09 0071=68,
+block,str,0.0,4,3=3523; 5=3493; 6=3454; 4=3383,
+domain,str,0.0,3,Coast/Rural=8347; Coast/Urban=4074; Interior=1432,domain
+quarter,str,0.0,1,174=13853,
+week,str,1.42,12,11=1411; 10=1281; 9=1256; 5=1196; 8=1194,
+region,str,0.0,9,04=4059; 06=2460; 03=2013; 05=1561; 02=1447,
+area,str,0.0,2,Coast=12421; Interior=1432,area
+zone,str,0.0,2,Rural=9779; Urban=4074,zone
+psu_centroid_lat,str,0.0,339,6.2765446=98; 5.3607235=84; 4.4648795=78; 7.5042343=69; 7.758914=68,
+psu_centroid_long,str,0.0,340,-58.001297=84; -59.598148=78; -58.792717=69; -59.860695=68; -59.192837=68,
+q1_02,str,0.0,9,Son/daughter=5281; Head=3787; Spouse/ partner=2248; Grand/great-grand child=1250; Brother/sister=525,Relation
+q1_03,str,0.0,2,Female=7073; Male=6780,Sex
+q1_04,str,0.0,100,17=316; 22=311; 20=300; 14=299; 5=283,
+q1_05,str,22.29,6,Not Married/ Never lived together=4658; Married=3092; Living together=1876; Widowed=614; Separated=389,Marital
+q1_06,str,4.42,8,East Indian=5218; African/ Black=3437; Mixed=3308; Ameridian=1213; Other=44,Ethnic
+q1_07,str,4.42,9,Guyana=13100; Other Caribbean country=80; South/Central America/Mexico=19; Other=16; U.S.A.=12,Born
+q1_08,str,98.98,41,1=11; 10=11; 7=9; 20=8; 2=8,
+q1_09,str,5.44,11,Region 4=3668; Region 6=2369; Region 3=1815; Region 5=1514; Region 2=1506,Region
+q1_10,str,4.42,5,In this city/village=10598; 5=1132; In another city/village of this Guyana region=946; In another Guyana region=404; In another country=161,Five
+q1_11,str,4.42,2,Yes=12253; No=988,yesno
+q1_12,str,11.55,2,No=8517; Yes=3736,yesno
+q1_13,str,11.55,5,Secondary=6837; Primary=3533; University / Tertiary=1073; Pre-primary=603; Post-secondary=207,Educ
+q1_14,str,26.71,11,Frm 5/Grd 11=2127; Frm 4/Grd 10=1567; Std 4/Grd 6=1462; Frm 3/Grd 9=1206; Frm 2/Grd 8=868,Class
+q1_15,str,92.7,6,Technical/Vocational Certificate or Diploma=545; University Certificate or Diploma=222; Bachelor's degree=155; Post graduate Certificate or Diploma=54; Masters=30,Level
+q1_16,str,73.84,10,GCE O' levels/CXC 5+=1502; School leaving=687; CXC Basic=578; GCE O' levels/CXC 3-4=449; College of Preceptors (CP)=188,Exam
+q2_01,str,31.55,2,No=8934; Yes=549,yesno
+q2_02,str,96.04,375,MECHANIC=17; WELDING=13; CUSTOMER SERVICE=11; NURSING=9; COMPUTER=8,
+q2_03,str,96.04,7,On the job=251; On-site government=111; On-site private institution=74; Correspondence Course=45; Other=37,Train
+q2_04,str,31.55,2,No=6062; Yes=3421,yesno
+q2_05,str,56.24,2,No=5189; Yes=873,yesno
+q2_06,str,62.54,3,99=5166; 1=16; 2=7,
+q2_07,str,62.71,2,No=4906; Yes=260,yesno
+q2_08,str,91.82,2,No=686; Yes=447,yesno
+q2_09,str,96.77,4,Mainly for sale/ barter=277; Only for family use=71; Mainly for family use=66; Only for sale/barter=33,obtain
+q2_10,str,63.6,2,No=4634; Yes=409,yesno
+q2_11,str,97.05,13,"Holiday/Vacation=132; Sickness=63; Other reason=61; Bad weather=36; Shift work, flexi time=27",Absent
+q2_12,str,99.07,3,Within 3 months or less=77; Not sure to return=36; After 3 months=16,return
+q2_13,str,99.62,2,No=49; Yes=3,yesno
+q2_14,str,65.89,2,No=4022; Yes=703,Want
+q2_15,str,94.93,11,"Applied/contacted organizations/employers=266; Cheched at work sites, markets, etc.=254; Sought assistance of friends or relatives=96; Other=49; Arranged for financial resources=10",Mainly
+q2_16,str,70.96,2,No=2729; Yes=1294,Main
+q2_17,str,90.66,11,"No jobs available in the area=328; Family responsibilities or housework=321; Other reasons=186; Attended school/training courses=163; Illness, injury or disability=70",Available
+q2_18,str,94.8,7,Less than 3 months=207; 1 to 2 years=141; 3 to 5 months=112; 6 to 12 months=97; 5 years or more=85,Long
+q2_19,str,65.89,3,"No=3063; Yes, within the next two weeks=1022; Yes, in the last 7 days=640",Start
+q2_20,str,77.89,8,"Housework/ family responsibilities=1057; Retired, too old for work=718; In school/ training=537; Illness, injury, disability=473; Other=229",NotAvailable
+q3_01,str,65.43,2,No=4626; Yes=163,yesno
+q3_02,str,98.82,5,Additional income needed=117; Other=14; Did not get a full time job=12; Financial independence=11; Hobby=9,Holding
+q3_03,str,65.43,84,40=1230; 48=723; 84=235; 56=198; 30=196,
+q3_04,str,98.82,32,12=16; 6=15; 20=13; 5=11; 4=10,
+q3_05,str,98.82,73,60=10; 99=6; 50=6; 30=5; 76=5,
+q3_06,str,91.52,10,"Full time work is less than 40 hrs/wk=635; Cannot find more work=217; Personal / family responsibilities=93; Does not want more work, has sufficient work=74; Other=68",H40
+q3_07_1,str,65.43,22,8=1877; 0=951; 12=414; 10=251; 9=213,
+q3_07_2,str,65.43,22,8=1908; 0=901; 12=421; 10=257; 9=227,
+q3_07_3,str,65.43,22,8=1876; 0=954; 12=417; 10=254; 5=211,
+q3_07_4,str,65.43,22,8=1933; 0=903; 12=420; 10=245; 9=221,
+q3_07_5,str,65.43,22,8=1886; 0=965; 12=402; 10=237; 9=207,
+q3_07_6,str,65.43,22,0=2153; 8=993; 12=386; 10=201; 5=170,
+q3_07_7,str,65.43,22,0=3399; 8=413; 12=276; 10=118; 4=82,
+q3_08,str,98.82,37,12=15; 5=14; 6=13; 4=12; 10=11,
+q3_09,str,65.43,104,40=860; 48=574; 0=354; 56=207; 84=185,
+q3_10,str,98.82,83,50=7; 60=6; 45=5; 48=5; 72=4,
+q3_11,str,65.43,2,No=3067; Yes=1722,yesno
+q3_12,str,87.57,2,Yes=1575; No=147,yesno
+q3_13,str,65.43,2,No=3712; Yes=1077,yesno
+q3_14,str,92.23,5,In the past 30 days=648; 12 months ago and over=151; From 1 month to less than 3 months ago=150; From 3 months to less than 6 months ago=70; From 6 months to less than 12 months ago=58,LastTime
+q3_15,str,92.23,11,"Other=514; Asked my boss to work more hours in my current job=215; Tried to get new clients=138; Seeking assistance of friends, relatives, colleagues, unions, etc=92; Checking at work sites, farms, factory gates, markets, etc=48",Addition
+q3_15b,str,96.29,374,GETTING THE JOB COMPLETED=24; OVERTIME=22; STAY LATE=16; WORK LONGER HOURS THAN USUAL=9; WORKED LONGER HOURS THAN USUAL=9,
+q3_16,str,65.43,4,"Employee (for another person, for a company or for the government)=3168; Self-employed (without paid help)=1125; Self-employed (with paid help)=274; Unpaid family worker=222",Q3_14
+q3_17,str,89.9,2,No=1077; Yes=322,yesno
+q3_18,str,77.13,2,A verbal agreement=1860; A written contract=1308,Wcontract
+q3_19,str,77.13,2,Permanent without time limit=2515; Limited time=653,Cagree
+q3_20,str,95.29,7,Daily=117; 24 months or more=107; 12 months or more but less than 24 months=95; 1 month or more but less than 3 months=86; 2 days or more but less than 1 month=84,Dcontrat
+q3_21,str,95.29,5,Less than 6 months=296; 3 years or more=155; 6 months or more but less than 1 year=81; 1 year or more but less than 2 years=73; 2 years or more but less than 3 years=48,Cemploy
+q3_22,str,77.13,2,No=1728; Yes=1440,yesno
+q3_23,str,77.13,3,No=2583; Yes=438; Don't know=147,yesnodont
+q3_24,str,77.13,2,Yes=1717; No=1451,yesno
+q3_25,str,77.13,3,No=1908; Yes=919; Possibily=341,Baby
+q3_26,str,77.13,2,Yes=1955; No=1213,yesno
+q3_27,str,67.03,2,No=3986; Yes=581,yesno
+q3_28,str,89.9,4,"No records are kept=1044; Only through informal records of orders, sales, purchases=210; Complete set of written accounts for tax purposes=110; Simplified written accounts not for tax purposes=35",Accounts
+q3_29,str,67.03,4,3=4106; 1=260; 2=162; 1 2=39,
+q3_30,str,65.43,3245,NO NAME=240; GUYSUCO=122; -1=78; MINISTRY OF EDUCATION=53; GUYANA POLICE FORCE=46,
+q3_31,str,65.43,2515,SUGAR=188; EDUCATION=132; CONSTRUCTION=100; GOLD=96; RICE=78,
+isic_code,str,65.43,269,4100=282; 0114=235; 4922=193; 0729=190; 8412=174,
+q3_32,str,65.44,1483,LABOURER=300; FARMER=267; DRIVER=117; TEACHER=106; CARPENTER=98,
+q3_33,str,65.43,3668,SELLING=103; DRIVING=72; TEACHING=61; CLEANING=37; CUTTING CANE=31,
+isco_code,str,65.43,315,9211=277; 6111=242; 8322=204; 5414=186; 5223=185,
+q3_34,str,65.43,5,"Business owned by individual, family or partners=2931; Government (Central or Local)=1109; Other non-governmental private organization=400; Corporate business/company (un-limited)=326; State enterprise/public body=23",Ownership
+q3_35,str,73.6,4,"Yes, registered=1678; No=1454; Don't know=497; In Process=28",Registered
+q3_36,str,87.68,23,1 2 3 4=520; 1=283; 1 2=266; 1 2 3=238; 5=116,
+q3_37,str,65.43,12,"In a fixed factory, office=1586; Other=681; In a farm or agricultural plot=617; In a fixed shop, store=564; In your home or the business owners home, but a separate workspace (whether inside or attached to the home)=291",Located
+q3_38,str,65.43,6,2 to 4 persons=1295; 1 person=1033; 50 or more persons=869; 5 to 9 persons=669; 20 to 49 persons=463,Mpersons
+q3_39,str,88.62,6,2 to 4 persons=590; Don't know=582; 1 person=340; 5 to 9 persons=50; 10 to 49 persons=13,Fmembers
+q3_40,str,65.43,5,1 year or more but less than 5 years=1402; 10 years or more=1397; 5 years or more but less than 10 years=823; Less than 6 months=809; 6 months or more but less than 1 year=358,Sworking
+q3_41,str,65.43,11,Yourself=4001; Spouse/Partner=373; Parents=252; Pension=54; Other relatives/friends in Guyana=31,Msource
+q4_01,str,95.26,5,12 months or more=263; 1 month and less than 3 months=133; 3 months and less than 6 months=106; Less than 1 month=92; 6 months and less than 12 months=62,Wwork
+q4_02,str,95.26,2,Yes=496; No=160,yesno
+q4_03,str,96.42,9,Other=167; Job completed=118; Individual dismissal=53; Insufficient payment=49; Moved to a new area=36,Mreason
+q4_04,str,96.42,50,40=142; 48=114; 84=30; 72=23; 56=21,
+q4_05,str,96.42,5,Private employee (work for another person or company)=375; Government employee=68; Self-employed (without paid help)=49; Self-employed (with paid help)=3; Unpaid family worker=1,EmpStat
+q4_06,str,99.62,2,No=45; Yes=7,yesno
+q4_07,str,96.8,5,Paid Permanent=217; Paid Temporary=174; Paid Casual=35; Home Worker/Sub Contractor=14; Paid apprentice/intern=3,Tworker
+q4_08,str,96.42,5,Guyana=483; Other Caribbean country=8; South/Central America/Mexico=3; U.S.A.=1; Other=1,Born
+q4_09,str,95.26,10,Parents=252; Spouse/Partner=134; Yourself=103; Savings=54; Friends/Other relatives in Guyana=36,Financial
+q5_01,str,70.63,5,Housewife=1570; Retired/ Old age=767; Other=672; Student=606; Unable to work=454,Ldays
+q5_02,str,70.63,2,No=2090; Yes=1979,yesno
+q5_03a,str,85.71,52,0=450; 1=161; 2=138; 5=124; 3=124,
+q5_03b,str,85.71,13,0=1474; 1=125; 2=86; 3=74; 6=50,
+q5_04,str,85.71,5,Private employee (work for another person or company)=1139; Government employee=490; Self-employed (without paid help)=301; Self-employed (with paid help)=28; Unpaid family worker=21,EmpStat
+q5_05,str,97.63,2,No=256; Yes=73,yesno
+q5_06,str,85.71,7,Guyana=1883; Other Caribbean country=38; U.S.A.=35; South/Central America/Mexico=14; Canada=4,Born
+q5_07,str,70.63,10,Spouse/Partner=1419; Parents=974; Pension=777; Son/Daughter=257; Yourself=223,Msfinancial
+q6_01,str,77.13,302,-1=326; 60000=209; 80000=149; 40000=126; 0=123,
+q6_01b,str,97.65,14,"F) $50,001  $100,000=100; N) Does not know=56; O) Does not want to answer=53; G) $100,001  $150,000=37; E) $20,001  $50,000=31",Card3
+q6_02a,str,77.13,2,No=3117; Yes=51,yesno
+q6_02b,str,77.13,2,No=2875; Yes=293,yesno
+q6_02c,str,77.13,2,No=3013; Yes=155,yesno
+q6_02d,str,77.13,2,No=3115; Yes=53,yesno
+q6_02e,str,77.13,2,No=3140; Yes=28,yesno
+q6_02f,str,77.13,2,No=3167; Yes=1,yesno
+q6_03a,str,77.13,2,No=2735; Yes=433,yesno
+q6_03b,str,77.13,2,No=3042; Yes=126,yesno
+q6_03c,str,77.13,2,No=3143; Yes=25,yesno
+q6_03d,str,77.13,2,No=3055; Yes=113,yesno
+q6_03e,str,77.13,2,No=3134; Yes=34,yesno
+q6_03f,str,77.13,1,No=3168,yesno
+q6_03g,str,77.13,2,No=3166; Yes=2,yesno
+q6_03h,str,77.13,2,No=3089; Yes=79,yesno
+q6_03i,str,77.13,2,No=3161; Yes=7,yesno
+q6_04a,str,99.63,29,-1=10; 10000=5; 15000=4; 20000=3; 50000=3,
+q6_04b,str,97.88,67,-1=58; 10000=23; 20000=20; 15000=19; 3000=13,
+q6_04c,str,98.88,50,-1=23; 5000=17; 3000=10; 10000=9; 4000=9,
+q6_04d,str,99.62,31,-1=7; 20000=4; 50000=4; 8000=3; 15000=3,
+q6_04e,str,99.8,17,-1=5; 3000=4; 6000=2; 5000=2; 1500=2,
+q6_04f,str,99.99,1,130000=1,
+q6_05a,str,96.87,74,20000=42; 15000=36; 5000=34; -1=31; 30000=21,
+q6_05b,str,99.09,30,-1=22; 25000=14; 15000=12; 30000=12; 20000=11,
+q6_05c,str,99.82,16,5000=4; -1=3; 0=2; 8000=2; 3000=2,
+q6_05d,str,99.18,43,10000=10; 5000=9; -1=9; 8000=7; 40000=6,
+q6_05e,str,99.75,15,-1=8; 10000=7; 3000=3; 12000=3; 15000=2,
+q6_05f,str,100.0,0,,
+q6_05g,str,99.99,2,20000=1; 10000=1,
+q6_05h,str,99.43,33,1000=10; 3000=10; 2000=8; 5000=6; 10000=5,
+q6_05i,str,99.95,7,12000=1; 400000=1; 15000=1; 2000=1; 3000=1,
+q6_06,str,89.9,114,0=219; -1=157; 20000=84; 30000=83; 40000=83,
+q6_06b,str,98.87,14,"E) $20,001  $50,000=29; O) Does not want to answer=28; N) Does not know=21; F) $50,001  $100,000=20; D) $13,001  $20,000=15",Card3
+q6_07,str,92.23,56,0=672; 5000=64; 10000=49; 20000=32; 3000=24,
+q6_08,str,97.68,2,Yes=230; No=92,yesno
+q6_09,str,98.34,36,10000=34; 5000=29; 2000=17; 15000=14; 6000=14,
+q6_10,str,98.82,47,0=30; 20000=15; 10000=15; 40000=10; 15000=8,
+q6_11,str,89.34,90,0=995; 27500=109; 27000=82; 25000=34; -1=30,
+q6_12,str,92.64,12,19000=937; 0=53; 57000=9; 1900=5; 18000=4,
+q6_13,str,79.48,73,0=2626; -1=29; 27500=20; 27000=13; 25000=11,
+q6_11b,str,99.78,5,"O) Does not want to answer=17; E) $20,001  $50,000=5; N) Does not know=4; F) $50,001  $100,000=2; D) $13,001  $20,000=2",Card3
+q6_12b,str,99.98,1,O) Does not want to answer=3,Card3
+q6_13b,str,99.79,6,"O) Does not want to answer=16; N) Does not know=6; G) $100,001  $150,000=2; H) $150,001  $200,000=2; F) $50,001  $100,000=2",Card3
+q6_14,str,53.87,54,0=6237; 13000=19; 12500=15; 13500=10; 12000=10,
+q6_15,str,31.55,29,0=9364; 7500=66; 75000=9; 7000=8; 15000=7,
+q6_16,str,31.55,33,0=9415; 60000=7; 20000=6; 90000=6; 120000=6,
+q6_17,str,31.55,6,0=9475; 8=3; -1=2; 200000=1; 60000=1,
+q6_18,str,31.55,65,0=9243; 60000=27; 20000=22; 120000=16; 10000=12,
+q6_19,str,31.55,75,0=8731; 20000=99; 10000=90; 5000=78; 50000=53,
+q6_20a,str,31.55,75,0=8902; 20000=107; 10000=57; 40000=52; 30000=47,
+q6_20b,str,31.55,56,0=8773; 100=183; 200=100; 300=75; 50=71,
+q6_21,str,43.08,36,0=7820; -1=6; 8=6; 100000=5; 50000=3,
+q6_22,str,31.55,153,0=8883; 60000=33; 100000=27; 30000=24; 10000=23,
+q6_23,str,31.55,2,No=8913; Yes=570,yesno
+q6_24a,str,95.89,60,0=96; 10000=57; 20000=56; 30000=31; 100000=31,
+q6_24b,str,95.89,35,0=424; 500=25; 50=17; 200=15; 100=13,
+q6_25,str,31.55,2,Yes=8863; No=620,yesno

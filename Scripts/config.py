@@ -13,6 +13,7 @@ TYPED_DIR = OUTPUTS_DIR / "typed"
 DIAGNOSTICS_DIR = OUTPUTS_DIR / "diagnostics"
 PROBLEM_INVENTORY_DIR = OUTPUTS_DIR / "problem_inventory"
 LOGS_DIR = OUTPUTS_DIR / "logs"
+CHARTS_DIR = OUTPUTS_DIR / "charts"
 
 DATASETS = {
     "ind": {
@@ -48,5 +49,5 @@ EXPECTED_COUNTS = {
     "ind": {"households": 3783, "individuals": 13853},
 }
 
-for _dir in (INTERIM_DIR, TYPED_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR):
+for _dir in (INTERIM_DIR, TYPED_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR, CHARTS_DIR):
     _dir.mkdir(parents=True, exist_ok=True)

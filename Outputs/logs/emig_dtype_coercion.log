@@ -1,0 +1,35 @@
+# Dtype coercion report: emig
+
+- Columns converted: 28
+- Columns where coercion introduced new NaNs: 0
+
+| Column | Dtype applied | Missing before | New NaN from coercion |
+| --- | --- | --- | --- |
+| hhid | string | 0 | 0 |
+| emig | Int8 | 0 | 0 |
+| weight | float64 | 0 | 0 |
+| stratum | string | 0 | 0 |
+| psu | string | 0 | 0 |
+| block | Int8 | 0 | 0 |
+| domain | category | 0 | 0 |
+| quarter | Int32 | 0 | 0 |
+| week | Int8 | 10 | 0 |
+| region | string | 0 | 0 |
+| area | category | 0 | 0 |
+| zone | category | 0 | 0 |
+| psu_centroid_lat | float64 | 0 | 0 |
+| psu_centroid_long | float64 | 0 | 0 |
+| q7_04 | category | 0 | 0 |
+| q7_05 | category | 0 | 0 |
+| q7_06 | Int8 | 0 | 0 |
+| q7_07 | category | 11 | 0 |
+| q7_08 | string | 514 | 0 |
+| q7_09 | Int32 | 0 | 0 |
+| q7_10 | category | 566 | 0 |
+| q7_11 | category | 0 | 0 |
+| q7_12 | category | 0 | 0 |
+| q7_13 | category | 56 | 0 |
+| q7_14 | category | 311 | 0 |
+| q7_15 | string | 311 | 0 |
+| q7_16 | category | 56 | 0 |
+| q7_17 | category | 463 | 0 |

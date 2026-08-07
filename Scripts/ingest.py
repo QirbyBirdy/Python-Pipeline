@@ -63,15 +63,31 @@ def get_documented_types(name: str, datasets: dict) -> pd.Series:
     return dictionary.set_index("column")["type"]
 
 
-# Stata storage type -> recommended pandas dtype once a column is actually
-# cleaned. Advisory only; nothing in this module applies a conversion.
-_NUMERIC_TYPE_ADVICE = {
-    "byte": "Int8 (nullable)",
-    "int": "Int32 (nullable)",
-    "long": "Int64 (nullable) -- used here for monetary amounts, can be large",
-    "float": "float64",
-    "double": "float64",
+# Stata storage type -> recommended pandas dtype. Single source of truth
+# for both the advisory recommend_dtypes() report and the actual conversion
+# in apply_dtypes() -- the token returned here is a literal dtype name
+# usable with .astype() (numeric tokens go through pd.to_numeric first).
+_NUMERIC_TYPE_MAP = {
+    "byte": ("Int8", "small numeric count (age, hours/week, block, week)"),
+    "int": ("Int32", "larger numeric (panel ID, quarter, total hours, emigration year)"),
+    "long": ("Int64", "monetary amount -- can be large"),
+    "float": ("float64", "weight or geo-coordinate"),
+    "double": ("float64", "weight or geo-coordinate"),
 }
+
+
+def _dtype_for_stata_type(stata_type: str, has_choices: bool) -> tuple:
+    """Return (pandas_dtype_token, reason) for one column's declared Stata type."""
+    if stata_type.startswith("str"):
+        width = int(stata_type.replace("str", ""))
+        if width > 20:
+            return "string", "free-text field -- no coded companion; out of scope to standardize under 'basic methods only'"
+        return "string", "short code/ID field -- leading characters can matter (e.g. region '01'); never coerce to a number"
+    if stata_type == "byte" and has_choices:
+        return "category", "coded categorical response"
+    if stata_type in _NUMERIC_TYPE_MAP:
+        return _NUMERIC_TYPE_MAP[stata_type]
+    return "string", "undeclared/unrecognized Stata type -- inspect manually"
 
 
 def recommend_dtypes(name: str, datasets: dict) -> pd.DataFrame:
@@ -81,22 +97,76 @@ def recommend_dtypes(name: str, datasets: dict) -> pd.DataFrame:
     dictionary = load_dictionary(name, datasets)
 
     def _recommend(row):
-        stata_type = row["type"]
         has_choices = isinstance(row["choices"], str) and row["choices"].strip() != ""
-        if stata_type.startswith("str"):
-            width = int(stata_type.replace("str", ""))
-            if width > 20:
-                return "string", "free-text field -- no coded companion; out of scope to standardize under 'basic methods only'"
-            return "string", "short code/ID field -- leading characters can matter (e.g. region '01'); never coerce to a number"
-        if stata_type == "byte" and has_choices:
-            return "category", f"coded categorical response (choices label-set: '{row['choices']}')"
-        if stata_type in _NUMERIC_TYPE_ADVICE:
-            return _NUMERIC_TYPE_ADVICE[stata_type], "numeric response (count, amount, or year) -- no documented choices label-set"
-        return "string", "undeclared/unrecognized Stata type -- inspect manually"
+        dtype_token, reason = _dtype_for_stata_type(row["type"], has_choices)
+        if dtype_token == "category":
+            reason = f"{reason} (choices label-set: '{row['choices']}')"
+        return dtype_token, reason
 
     recs = dictionary.apply(_recommend, axis=1, result_type="expand")
     recs.columns = ["recommended_dtype", "reason"]
     return pd.concat([dictionary[["column", "description", "type", "choices"]], recs], axis=1)
+
+
+def apply_dtypes(df: pd.DataFrame, name: str, datasets: dict) -> tuple:
+    """Apply recommend_dtypes()'s recommendations to a loaded (all-string)
+    DataFrame. Returns (typed_df, coercion_report): typed_df is a new
+    DataFrame (the input is not modified in place), and coercion_report has
+    one row per column recording the dtype applied and how many values
+    became NaN purely because of the conversion -- i.e. values that were
+    present in the raw string data but didn't parse, not values that were
+    already missing/blank."""
+    dictionary = load_dictionary(name, datasets)
+    typed_df = df.copy()
+    report_rows = []
+
+    for _, row in dictionary.iterrows():
+        col = row["column"]
+        has_choices = isinstance(row["choices"], str) and row["choices"].strip() != ""
+        dtype_token, _ = _dtype_for_stata_type(row["type"], has_choices)
+
+        series = typed_df[col]
+        n_missing_before = int(series.isna().sum())
+
+        if dtype_token in ("category", "string"):
+            typed_df[col] = series.astype(dtype_token)
+            n_new_na = 0
+        else:
+            numeric = pd.to_numeric(series, errors="coerce")
+            n_new_na = int(numeric.isna().sum()) - n_missing_before
+            typed_df[col] = numeric.astype(dtype_token)
+
+        report_rows.append(
+            {
+                "column": col,
+                "dtype_applied": dtype_token,
+                "n_missing_before": n_missing_before,
+                "n_new_na_from_coercion": n_new_na,
+            }
+        )
+
+    return typed_df, pd.DataFrame(report_rows)
+
+
+def render_coercion_report(name: str, coercion_report: pd.DataFrame) -> str:
+    """Render apply_dtypes()'s coercion_report as a markdown summary,
+    per the brief's requirement to 'report columns where coercion created NAs'."""
+    flagged = coercion_report[coercion_report["n_new_na_from_coercion"] > 0]
+    lines = [
+        f"# Dtype coercion report: {name}",
+        "",
+        f"- Columns converted: {len(coercion_report)}",
+        f"- Columns where coercion introduced new NaNs: {len(flagged)}",
+        "",
+        "| Column | Dtype applied | Missing before | New NaN from coercion |",
+        "| --- | --- | --- | --- |",
+    ]
+    for _, row in coercion_report.iterrows():
+        lines.append(
+            f"| {row['column']} | {row['dtype_applied']} | {row['n_missing_before']} | "
+            f"{row['n_new_na_from_coercion']} |"
+        )
+    return "\n".join(lines) + "\n"
 
 
 def verify_counts(name: str, df: pd.DataFrame, expected_counts: dict) -> tuple:
@@ -151,8 +221,33 @@ def ingest_all(datasets: dict, expected_counts: dict) -> dict:
     return {name: ingest(name, datasets, expected_counts) for name in datasets}
 
 
+def type_dataset(name: str, datasets: dict) -> Path:
+    """Load the raw dataset fresh, apply recommend_dtypes()'s conversions,
+    write the typed result to Outputs/typed/<name>_typed.parquet, and log
+    the coercion report. The raw interim parquet from ingest() is untouched
+    -- this is a separate, derived output."""
+    df = load_dataset(name, datasets)
+    typed_df, coercion_report = apply_dtypes(df, name, datasets)
+
+    log_text = render_coercion_report(name, coercion_report)
+    datasets[name]["dtype_log"].write_text(log_text, encoding="utf-8")
+    print(log_text)
+
+    out_path = datasets[name]["typed"]
+    typed_df.to_parquet(out_path, index=False)
+    return out_path
+
+
+def type_all(datasets: dict) -> dict:
+    return {name: type_dataset(name, datasets) for name in datasets}
+
+
 if __name__ == "__main__":
     for dataset_name in config.DATASETS:
-        print(f"=== {dataset_name} ===")
-        out_path = ingest(dataset_name, config.DATASETS, config.EXPECTED_COUNTS)
-        print(f"-> {out_path}\n")
+        print(f"=== {dataset_name}: ingest ===")
+        interim_path = ingest(dataset_name, config.DATASETS, config.EXPECTED_COUNTS)
+        print(f"-> {interim_path}\n")
+
+        print(f"=== {dataset_name}: apply dtypes ===")
+        typed_path = type_dataset(dataset_name, config.DATASETS)
+        print(f"-> {typed_path}\n")

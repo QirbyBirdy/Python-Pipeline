@@ -9,6 +9,7 @@ DATA_DIR = PROJECT_ROOT / "Data"
 OUTPUTS_DIR = PROJECT_ROOT / "Outputs"
 
 INTERIM_DIR = OUTPUTS_DIR / "interim"
+TYPED_DIR = OUTPUTS_DIR / "typed"
 DIAGNOSTICS_DIR = OUTPUTS_DIR / "diagnostics"
 PROBLEM_INVENTORY_DIR = OUTPUTS_DIR / "problem_inventory"
 LOGS_DIR = OUTPUTS_DIR / "logs"
@@ -18,19 +19,23 @@ DATASETS = {
         "csv": DATA_DIR / "glfs-174-ind-public.csv",
         "dictionary": DATA_DIR / "glfs-174-ind-public-dictionary.csv",
         "interim": INTERIM_DIR / "ind_raw.parquet",
+        "typed": TYPED_DIR / "ind_typed.parquet",
         "diagnostics_csv": DIAGNOSTICS_DIR / "ind_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "ind_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "ind_problem_inventory.md",
         "ingest_log": LOGS_DIR / "ind_ingest.log",
+        "dtype_log": LOGS_DIR / "ind_dtype_coercion.log",
     },
     "emig": {
         "csv": DATA_DIR / "glfs-174-emig-public.csv",
         "dictionary": DATA_DIR / "glfs-174-emig-public-dictionary.csv",
         "interim": INTERIM_DIR / "emig_raw.parquet",
+        "typed": TYPED_DIR / "emig_typed.parquet",
         "diagnostics_csv": DIAGNOSTICS_DIR / "emig_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "emig_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "emig_problem_inventory.md",
         "ingest_log": LOGS_DIR / "emig_ingest.log",
+        "dtype_log": LOGS_DIR / "emig_dtype_coercion.log",
     },
 }
 
@@ -43,5 +48,5 @@ EXPECTED_COUNTS = {
     "ind": {"households": 3783, "individuals": 13853},
 }
 
-for _dir in (INTERIM_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR):
+for _dir in (INTERIM_DIR, TYPED_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR):
     _dir.mkdir(parents=True, exist_ok=True)

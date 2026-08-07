@@ -8,6 +8,7 @@ and the household emigration module (`emig`).
 
 Project reset back to a basic ingest-only overview, since extended with
 actual dtype conversion. Current state:
+
 - `Scripts/config.py` — every path used by the pipeline, in one place
 - `Scripts/ingest.py` — loads the raw CSVs, validates them against their
   dictionaries, verifies row/household counts against the source
@@ -22,7 +23,7 @@ brief, Section 3.1), not a cleaning issue class.
 
 ## Folder layout
 
-```
+```text
 Data/                       raw GLFS CSVs + data dictionaries + methodological report (never edited in place)
 Scripts/
   config.py                  every path used by the pipeline, in one place
@@ -85,6 +86,7 @@ print(recommend_dtypes("ind", config.DATASETS))
 ## Verifying output
 
 Run `python Scripts/ingest.py` and check:
+
 1. It exits without raising — a column mismatch (CSV vs. dictionary) or a
    row/household count mismatch (vs. the methodological report) raises
    immediately rather than continuing on unverified data.
@@ -114,7 +116,7 @@ General rule, derived from that column plus whether a `choices` label-set is
 documented:
 
 | Stata type | Has `choices`? | Recommended pandas dtype | Why |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `byte` | yes | `category` | Coded categorical response (e.g. `q1_03` Sex, label-set `Sex`) |
 | `byte` | no | `Int8` (nullable) | Small numeric count (age, hours/week, block, week) |
 | `int` | — | `Int32` (nullable) | Larger numeric (panel ID, quarter, total hours, emigration year) |
@@ -133,6 +135,7 @@ context/reporting, but they're poor candidates for cleaning/imputation
 effort unless your assigned scope specifically names one.
 
 **Two dictionary quirks worth knowing about, not treating as real signal:**
+
 - `q3_29` and `q3_36` are typed as short strings (`str3`, `str9`) rather than
   `byte`/`category` even though they're "check all that apply" questions in
   the original questionnaire — the export likely concatenates selected
@@ -155,6 +158,7 @@ variable or actual survey content. There is no "obviously drop this" admin
 clutter left to prune.
 
 What that leaves to decide:
+
 - **Always keep**: `hhid`, `weight`, `stratum`, `psu`, `domain`, `region`,
   `area`, `zone` — sample design and identifier variables. The brief says
   not to *apply* weights, but preserve them regardless.

@@ -2,5 +2,5 @@ Dataset: ind
 Rows loaded: 13853
 Columns loaded: 175
 Unique households (hhid): 3783
-Expected individuals (methodological report, p.3): 13853 -- MATCH
-Expected households (methodological report, p.3): 3783 -- MATCH
+Expected individuals: 13853 -- MATCH
+Expected households: 3783 -- MATCH

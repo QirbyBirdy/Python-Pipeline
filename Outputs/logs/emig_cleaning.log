@@ -1,0 +1,7 @@
+Cleaning: emig
+Rows before: 659
+Exact-duplicate rows dropped (key=['hhid', 'emig']): 0
+Age sentinel (-1) corrected to NaN in q7_06: 28
+Validation-rule flags: 0 flag(s) across 0 unique row(s), 0 rule(s) -- see emig_flagged_for_review.csv
+Value mappings: none defined yet (populated after reviewing near-duplicate candidates)
+Rows after: 659

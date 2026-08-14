@@ -1,0 +1,9 @@
+Cleaning: ind
+Rows before: 13853
+Exact-duplicate rows dropped (key=['hhid', 'member']): 0
+Age sentinel (-1) corrected to NaN in q1_04: 12
+Validation-rule flags: 589 flag(s) across 515 unique row(s), 19 rule(s) -- see ind_flagged_for_review.csv
+Value mappings: none defined yet (populated after reviewing near-duplicate candidates)
+isic_section derived for 4789 of 4789 rows with an isic_code
+isco_major_group derived for 4789 of 4789 rows with an isco_code
+Rows after: 13853

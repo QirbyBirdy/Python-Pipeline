@@ -37,3 +37,5 @@
 
 - No duplicate hhid+emig rows -- reliable natural key.
 - q7_06: 28 value(s) out of range, all exactly -1 -- looks like a missing/'don't know' sentinel, not a real data error. Treat as NaN when cleaning rather than a literal value.
+- 21 near-duplicate value pair(s) found across the free-text columns -- see emig_near_duplicates.csv for manual review.
+- All 13 category columns are casing-consistent.

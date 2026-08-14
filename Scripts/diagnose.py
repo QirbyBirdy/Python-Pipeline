@@ -12,6 +12,7 @@ parse here.
 """
 
 import pandas as pd
+from rapidfuzz import distance, process
 
 import config
 from ingest import apply_dtypes, load_dataset
@@ -123,6 +124,78 @@ def age_group_distribution(age_series: pd.Series) -> tuple:
     return value_counts_labeled(groups)
 
 
+def classify_missingness(df: pd.DataFrame, dependent_col: str, gate_col: str, applies_when) -> dict:
+    """Split a dependent column's missingness into structural (the gate
+    says the question doesn't apply) vs incidental (the gate says it
+    applies, but the answer is still missing) -- see CLEANING_PLAN.md,
+    Part 2. Only meaningful for the bounded, verified single-parent gates
+    in config.SKIP_PATTERNS; not a general-purpose skip-pattern resolver."""
+    dependent_missing = df[dependent_col].isna()
+    gate_applies = df[gate_col] == applies_when
+    n_missing = int(dependent_missing.sum())
+    n_structural = int((dependent_missing & ~gate_applies).sum())
+    n_incidental = int((dependent_missing & gate_applies).sum())
+    return {
+        "dependent_col": dependent_col,
+        "gate_col": gate_col,
+        "n_missing": n_missing,
+        "n_structural": n_structural,
+        "n_incidental": n_incidental,
+        "pct_structural": round(100 * n_structural / n_missing, 2) if n_missing else 0.0,
+    }
+
+
+def find_near_duplicate_values(series: pd.Series, threshold: float = 0.95) -> pd.DataFrame:
+    """Pairwise Jaro-Winkler similarity between every pair of unique
+    non-null values in a free-text column; returns pairs >= threshold,
+    sorted by similarity descending. Flag-only -- does not merge or alter
+    anything (see CLEANING_PLAN.md, Part 3). Only realistic for the
+    free-text columns in config.FREE_TEXT_COLUMNS.
+
+    Threshold verified empirically, not just assumed: 0.90 (the value
+    CLEANING_PLAN.md originally proposed) let through clearly-wrong pairs
+    like "CUTTING CANE"/"CUTTING HAIR" and "SELLING FISH"/"SELLING OF LIME"
+    -- Jaro-Winkler over-rewards a shared prefix on short strings. 0.95
+    keeps genuine typo/spacing/punctuation variants (e.g. "GUYANA SUGAR
+    CORPORATION (GUYSUCO)" vs "GUYANA SUGAR CORPORATION ( GUYSUCO)") while
+    cutting the false positives."""
+    columns = ["value_a", "count_a", "value_b", "count_b", "similarity"]
+    values = series.dropna().astype(str).str.strip()
+    values = values[values != ""]
+    counts = values.value_counts()
+    unique_values = counts.index.tolist()
+    if len(unique_values) < 2:
+        return pd.DataFrame(columns=columns)
+
+    sim_matrix = process.cdist(unique_values, unique_values, scorer=distance.JaroWinkler.similarity)
+    rows = []
+    for i in range(len(unique_values)):
+        for j in range(i + 1, len(unique_values)):
+            similarity = sim_matrix[i][j]
+            if similarity >= threshold:
+                rows.append(
+                    {
+                        "value_a": unique_values[i],
+                        "count_a": int(counts[unique_values[i]]),
+                        "value_b": unique_values[j],
+                        "count_b": int(counts[unique_values[j]]),
+                        "similarity": round(float(similarity), 3),
+                    }
+                )
+    result = pd.DataFrame(rows, columns=columns)
+    return result.sort_values("similarity", ascending=False).reset_index(drop=True)
+
+
+def check_casing_consistency(series: pd.Series) -> bool:
+    """True if there are no case/whitespace-only variants among a column's
+    non-null values -- verify before building normalization code nobody
+    needs (see CLEANING_PLAN.md, Part 5)."""
+    values = series.dropna().astype(str)
+    if len(values) == 0:
+        return True
+    return values.nunique() == values.str.lower().str.strip().nunique()
+
+
 def render_diagnostics_report(
     name: str,
     df: pd.DataFrame,
@@ -131,6 +204,7 @@ def render_diagnostics_report(
     range_flags: dict,
     distributions: dict,
     recommendations: list,
+    missingness_classification: list = None,
 ) -> str:
     n_rows, n_cols = df.shape
     lines = [
@@ -146,6 +220,20 @@ def render_diagnostics_report(
     ]
     for _, row in missingness.head(15).iterrows():
         lines.append(f"| {row['column']} | {row['pct_missing']} | {row['n_missing']} |")
+
+    if missingness_classification:
+        lines += [
+            "",
+            "## Missingness: structural vs incidental (bounded set of verified skip gates)",
+            "",
+            "| Column | Gate | Missing | Structural | Incidental | % structural |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+        for c in missingness_classification:
+            lines.append(
+                f"| {c['dependent_col']} | {c['gate_col']} | {c['n_missing']} | "
+                f"{c['n_structural']} | {c['n_incidental']} | {c['pct_structural']} |"
+            )
 
     lines += ["", f"## Duplicate rows on natural key {_DUPLICATE_KEYS[name]} ({len(duplicates)} rows involved)", ""]
     if len(duplicates):
@@ -190,6 +278,30 @@ def diagnose_ind(datasets: dict) -> dict:
         for (dname, col), (low, high) in _RANGE_CHECKS.items()
         if dname == "ind"
     }
+    missingness_classification = [
+        classify_missingness(df, dependent_col, gate_col, applies_when)
+        for dependent_col, gate_col, applies_when in config.SKIP_PATTERNS["ind"]
+    ]
+
+    near_dup_frames = []
+    for col in config.FREE_TEXT_COLUMNS["ind"]:
+        pairs = find_near_duplicate_values(df[col])
+        if len(pairs):
+            pairs.insert(0, "column", col)
+            near_dup_frames.append(pairs)
+    near_duplicates = pd.concat(near_dup_frames, ignore_index=True) if near_dup_frames else pd.DataFrame(
+        columns=["column", "value_a", "count_a", "value_b", "count_b", "similarity"]
+    )
+    near_duplicates.to_csv(paths["near_duplicates"], index=False)
+
+    category_columns = [c for c in df.columns if str(df[c].dtype) == "category"]
+    casing_results = pd.DataFrame(
+        {
+            "column": category_columns,
+            "casing_consistent": [check_casing_consistency(df[c]) for c in category_columns],
+        }
+    )
+    casing_results.to_csv(paths["casing_check"], index=False)
 
     sex_table, sex_missing = value_counts_labeled(df["q1_03"])
     age_table, age_missing = age_group_distribution(df["q1_04"])
@@ -243,7 +355,44 @@ def diagnose_ind(datasets: dict) -> dict:
             "not apply) -- do not treat that as missing data to impute, it's a structural skip."
         )
 
-    log_text = render_diagnostics_report("ind", df, missingness, duplicates, range_flags, distributions, recommendations)
+    if missingness_classification:
+        low_structural = [c for c in missingness_classification if c["n_missing"] and c["pct_structural"] < 90]
+        if low_structural:
+            names = ", ".join(c["dependent_col"] for c in low_structural)
+            recommendations.append(
+                f"{names}: less than 90% of missingness is structural against its documented gate -- "
+                "the remainder is real (incidental) nonresponse, worth a closer look rather than assuming skip pattern."
+            )
+        else:
+            recommendations.append(
+                "All checked skip-gate columns (q2_02/q2_03, q1_12-q1_16, q3_04/q3_05, q2_15) have missingness "
+                "that's almost entirely structural -- confirms the CAPI skip logic worked as designed for these fields."
+            )
+
+    if len(near_duplicates):
+        recommendations.append(
+            f"{len(near_duplicates)} near-duplicate value pair(s) found across the free-text columns "
+            f"(Jaro-Winkler >= 0.90) -- see {paths['near_duplicates'].name} for manual review before building "
+            "any value-consolidation mapping."
+        )
+    else:
+        recommendations.append("No near-duplicate free-text values found at the 0.90 similarity threshold.")
+
+    n_inconsistent_casing = int((~casing_results["casing_consistent"]).sum())
+    if n_inconsistent_casing:
+        recommendations.append(
+            f"{n_inconsistent_casing} of {len(casing_results)} category columns have case/whitespace variants -- "
+            f"see {paths['casing_check'].name} for which ones before writing normalization code."
+        )
+    else:
+        recommendations.append(
+            f"All {len(casing_results)} category columns are casing-consistent (confirms the Stata-labeled-export "
+            "hypothesis) -- no 'M'/'m'/'Male'-style normalization is needed for the pre-coded fields."
+        )
+
+    log_text = render_diagnostics_report(
+        "ind", df, missingness, duplicates, range_flags, distributions, recommendations, missingness_classification
+    )
     paths["diagnostics_report"].write_text(log_text, encoding="utf-8")
     missingness.to_csv(paths["diagnostics_csv"], index=False)
     print(log_text)
@@ -253,6 +402,9 @@ def diagnose_ind(datasets: dict) -> dict:
         "duplicates": duplicates,
         "range_flags": range_flags,
         "distributions": distributions,
+        "missingness_classification": missingness_classification,
+        "near_duplicates": near_duplicates,
+        "casing_results": casing_results,
         "recommendations": recommendations,
     }
 
@@ -272,6 +424,26 @@ def diagnose_emig(datasets: dict) -> dict:
         if dname == "emig"
     }
 
+    near_dup_frames = []
+    for col in config.FREE_TEXT_COLUMNS["emig"]:
+        pairs = find_near_duplicate_values(df[col])
+        if len(pairs):
+            pairs.insert(0, "column", col)
+            near_dup_frames.append(pairs)
+    near_duplicates = pd.concat(near_dup_frames, ignore_index=True) if near_dup_frames else pd.DataFrame(
+        columns=["column", "value_a", "count_a", "value_b", "count_b", "similarity"]
+    )
+    near_duplicates.to_csv(paths["near_duplicates"], index=False)
+
+    category_columns = [c for c in df.columns if str(df[c].dtype) == "category"]
+    casing_results = pd.DataFrame(
+        {
+            "column": category_columns,
+            "casing_consistent": [check_casing_consistency(df[c]) for c in category_columns],
+        }
+    )
+    casing_results.to_csv(paths["casing_check"], index=False)
+
     recommendations = []
     if len(duplicates):
         recommendations.append(f"{len(duplicates)} rows share a duplicate hhid+emig key -- investigate before dedup.")
@@ -283,6 +455,23 @@ def diagnose_emig(datasets: dict) -> dict:
     if not any(len(flagged) for flagged in range_flags.values()):
         recommendations.append("Age and weight fall within expected bounds -- no range-check flags.")
 
+    if len(near_duplicates):
+        recommendations.append(
+            f"{len(near_duplicates)} near-duplicate value pair(s) found across the free-text columns -- see "
+            f"{paths['near_duplicates'].name} for manual review."
+        )
+    else:
+        recommendations.append("No near-duplicate free-text values found at the 0.90 similarity threshold.")
+
+    n_inconsistent_casing = int((~casing_results["casing_consistent"]).sum())
+    if n_inconsistent_casing:
+        recommendations.append(
+            f"{n_inconsistent_casing} of {len(casing_results)} category columns have case/whitespace variants -- "
+            f"see {paths['casing_check'].name}."
+        )
+    else:
+        recommendations.append(f"All {len(casing_results)} category columns are casing-consistent.")
+
     log_text = render_diagnostics_report("emig", df, missingness, duplicates, range_flags, {}, recommendations)
     paths["diagnostics_report"].write_text(log_text, encoding="utf-8")
     missingness.to_csv(paths["diagnostics_csv"], index=False)
@@ -292,6 +481,8 @@ def diagnose_emig(datasets: dict) -> dict:
         "missingness": missingness,
         "duplicates": duplicates,
         "range_flags": range_flags,
+        "near_duplicates": near_duplicates,
+        "casing_results": casing_results,
         "recommendations": recommendations,
     }
 

@@ -23,6 +23,18 @@
 | q6_04d | 99.62 | 13800 |
 | q6_05h | 99.43 | 13774 |
 
+## Missingness: structural vs incidental (bounded set of verified skip gates)
+
+| Column | Gate | Missing | Structural | Incidental | % structural |
+| --- | --- | --- | --- | --- | --- |
+| q2_02 | q2_01 | 13304 | 13304 | 0 | 100.0 |
+| q2_03 | q2_01 | 13304 | 13304 | 0 | 100.0 |
+| q1_12 | q1_11 | 1600 | 1600 | 0 | 100.0 |
+| q1_13 | q1_11 | 1600 | 1600 | 0 | 100.0 |
+| q3_04 | q3_01 | 13690 | 13690 | 0 | 100.0 |
+| q3_05 | q3_01 | 13690 | 13690 | 0 | 100.0 |
+| q2_15 | q2_14 | 13150 | 13150 | 0 | 100.0 |
+
 ## Duplicate rows on natural key ['hhid', 'member'] (0 rows involved)
 
 - none found
@@ -74,3 +86,6 @@ Missing: 9064
 - 60 columns are >90% missing -- almost entirely expected survey skip patterns (e.g. q6_* income sub-questions only apply to employees with that income source), not a data-quality problem by itself. Worth distinguishing structural vs. incidental missingness per-variable once cleaning scope is known.
 - Sex is 48.9% male / 51.1% female with 0 missing -- close to balanced, no coverage concern for this variable.
 - 'Employee (for another person, for a company or for the government)' dominates employment status (66.15% of valid responses); 9064 rows are missing this field entirely (not currently employed, so q3_16 correctly does not apply) -- do not treat that as missing data to impute, it's a structural skip.
+- All checked skip-gate columns (q2_02/q2_03, q1_12-q1_16, q3_04/q3_05, q2_15) have missingness that's almost entirely structural -- confirms the CAPI skip logic worked as designed for these fields.
+- 1422 near-duplicate value pair(s) found across the free-text columns (Jaro-Winkler >= 0.90) -- see ind_near_duplicates.csv for manual review before building any value-consolidation mapping.
+- All 99 category columns are casing-consistent (confirms the Stata-labeled-export hypothesis) -- no 'M'/'m'/'Male'-style normalization is needed for the pre-coded fields.

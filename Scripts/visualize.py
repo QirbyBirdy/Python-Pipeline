@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import config
-from diagnose import age_group_distribution, load_typed, value_counts_labeled
+from diagnose import age_group_distribution, value_counts_labeled
 
 # Validated default palette (dataviz skill, references/palette.md), light surface.
 _SURFACE = "#fcfcfb"
@@ -131,17 +131,108 @@ def plot_donut(
     plt.close(fig)
 
 
+def plot_bar(table: pd.DataFrame, title: str, out_path, xlabel: str = "") -> None:
+    """Horizontal single-hue bar chart for a value_counts_labeled()-shaped
+    table with too many categories for a donut. The dataviz skill's
+    series-count ladder caps meaningful multi-color categorical identity
+    around 7-8 slots; ISIC section (21) and ISCO major group (10) both
+    exceed it. Axis labels already carry identity, so one hue plus a bar's
+    precisely-comparable length is both more readable and more accurate
+    here than forcing that many colors into wedges."""
+    plot_table = table.sort_values("count", ascending=True)  # ascending: barh draws bottom-up, largest ends on top
+    labels = [_wrap_label(label, width=45) for label in plot_table["label"]]
+    # Height scales with total wrapped LINE count, not bar count -- a few
+    # very long labels (e.g. some ISIC section names) wrap to 3+ lines and
+    # would otherwise collide with short single-line neighbors if every
+    # row got the same fixed slot.
+    total_lines = sum(label.count("\n") + 1 for label in labels)
+    height = max(3.5, 0.34 * total_lines + 1.5)
+
+    fig, ax = plt.subplots(figsize=(9, height), dpi=150)
+    bars = ax.barh(labels, plot_table["count"], height=0.6, color=_SEQUENTIAL_BLUE[4])
+
+    ax.set_facecolor(_SURFACE)
+    fig.set_facecolor(_SURFACE)
+    for side in ("top", "right", "bottom"):
+        ax.spines[side].set_visible(False)
+    ax.spines["left"].set_color("#c3c2b7")
+    ax.xaxis.set_ticks([])
+    ax.tick_params(axis="y", colors=_PRIMARY_INK, labelsize=9, length=0)
+    ax.set_title(title, fontsize=13, color=_PRIMARY_INK, loc="left", pad=12)
+    ax.margins(x=0.13)
+
+    for bar, count in zip(bars, plot_table["count"]):
+        ax.annotate(
+            f"{count:,}",
+            xy=(bar.get_width(), bar.get_y() + bar.get_height() / 2),
+            xytext=(6, 0),
+            textcoords="offset points",
+            ha="left",
+            va="center",
+            fontsize=9,
+            color=_SECONDARY_INK,
+        )
+
+    fig.savefig(out_path, format="jpeg", pil_kwargs={"quality": 92}, bbox_inches="tight", facecolor=_SURFACE)
+    plt.close(fig)
+
+
+def plot_histogram(series: pd.Series, title: str, out_path, xlabel: str, bins: int = 20) -> None:
+    """Histogram for a continuous numeric variable (hours worked) --
+    the brief's chart requirements explicitly call for a distribution of
+    key numeric variables, which a donut/bar-of-categories can't show."""
+    valid = series.dropna().astype(float)
+    mean_val = valid.mean()
+
+    fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+    ax.hist(valid, bins=bins, color=_SEQUENTIAL_BLUE[4], edgecolor=_SURFACE, linewidth=1.2)
+
+    ax.set_facecolor(_SURFACE)
+    fig.set_facecolor(_SURFACE)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.spines["left"].set_color("#c3c2b7")
+    ax.spines["bottom"].set_color("#c3c2b7")
+    ax.yaxis.grid(True, color="#e1e0d9", linewidth=1)
+    ax.set_axisbelow(True)
+    ax.tick_params(colors=_MUTED_INK, labelsize=9)
+    ax.set_xlabel(xlabel, fontsize=10, color=_SECONDARY_INK)
+    ax.set_ylabel("Number of respondents", fontsize=10, color=_SECONDARY_INK)
+    ax.set_title(title, fontsize=13, color=_PRIMARY_INK, loc="left", pad=12)
+
+    ax.axvline(mean_val, color="#eb6834", linewidth=2, linestyle="--")
+    ax.annotate(
+        f"mean = {mean_val:.1f}",
+        xy=(mean_val, ax.get_ylim()[1]),
+        xytext=(8, -4),
+        textcoords="offset points",
+        fontsize=9,
+        color="#eb6834",
+        va="top",
+    )
+
+    fig.savefig(out_path, format="jpeg", pil_kwargs={"quality": 92}, bbox_inches="tight", facecolor=_SURFACE)
+    plt.close(fig)
+
+
 def make_charts(datasets: dict) -> dict:
-    """Generate the three named-variable distribution charts for ind (sex,
-    age group, employment status) as JPEG donut charts. Returns
-    {chart_name: output_path}."""
-    df = load_typed("ind", datasets)
+    """Generate every distribution chart for ind (sex, age group,
+    employment status, ISIC section, ISCO major group, hours worked) as
+    JPEG. Reads Outputs/typed/ind_cleaned.parquet -- run ingest.py,
+    diagnose.py, then clean.py first (sentinel corrections and the
+    isic_section/isco_major_group columns only exist post-cleaning).
+    Returns {chart_name: output_path}."""
+    df = pd.read_parquet(datasets["ind"]["cleaned"])
 
     sex_table, _ = value_counts_labeled(df["q1_03"])
     age_table, _ = age_group_distribution(df["q1_04"])
     emp_table, _ = value_counts_labeled(df["q3_16"])
+    isic_table, _ = value_counts_labeled(df["isic_section_label"])
+    isco_table, _ = value_counts_labeled(df["isco_major_group_label"])
 
-    charts = {
+    out_paths = {}
+
+    donut_charts = {
         "sex_distribution": (sex_table, "Sex distribution (ind, q1_03)", "categorical", "respondents"),
         "age_group_distribution": (
             age_table,
@@ -156,13 +247,31 @@ def make_charts(datasets: dict) -> dict:
             "with a main job",
         ),
     }
-
-    out_paths = {}
-    for chart_name, (table, title, color_mode, center_label) in charts.items():
+    for chart_name, (table, title, color_mode, center_label) in donut_charts.items():
         out_path = config.CHARTS_DIR / f"{chart_name}.jpg"
         plot_donut(table, title, out_path, color_mode=color_mode, center_label=center_label)
         out_paths[chart_name] = out_path
         print(f"-> {out_path}")
+
+    bar_charts = {
+        "isic_section_distribution": (isic_table, "Industry (ISIC Rev.4 section), main job (ind, isic_code)"),
+        "isco_major_group_distribution": (isco_table, "Occupation (ISCO-08 major group), main job (ind, isco_code)"),
+    }
+    for chart_name, (table, title) in bar_charts.items():
+        out_path = config.CHARTS_DIR / f"{chart_name}.jpg"
+        plot_bar(table, title, out_path)
+        out_paths[chart_name] = out_path
+        print(f"-> {out_path}")
+
+    hours_out_path = config.CHARTS_DIR / "hours_worked_distribution.jpg"
+    plot_histogram(
+        df["q3_03"],
+        "Usual hours worked per week, main job (ind, q3_03; 99-sentinel already corrected)",
+        hours_out_path,
+        xlabel="Hours per week",
+    )
+    out_paths["hours_worked_distribution"] = hours_out_path
+    print(f"-> {hours_out_path}")
 
     return out_paths
 

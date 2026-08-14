@@ -22,6 +22,15 @@ import config
 _ID_COLUMNS = {"ind": ["hhid", "member"], "emig": ["hhid", "emig"]}
 _AGE_COLUMNS = {"ind": "q1_04", "emig": "q7_06"}
 
+# Columns where 99 is a verified top-code/sentinel, not a literal value.
+# Evidence (checked across every hours-related column before adding any of
+# these): q3_03 has 88 values of exactly 99, with every other value capping
+# at 98 -- a classic "99 or more" top-code. q3_05 has 6 (matching the
+# usual_hours_mismatch flags). q3_04/q3_08/q3_09/q3_10/q3_07_1..7 all have
+# ZERO occurrences of 99 despite going as high as 168 -- confirms this is
+# specific to these two "usual hours" fields, not a general hours sentinel.
+_HOURS_SENTINEL_COLUMNS = {"ind": ["q3_03", "q3_05"], "emig": []}
+
 _FLAGGED_COLUMNS = ["hhid", "id2", "rule_name", "detail"]
 
 
@@ -44,6 +53,19 @@ def correct_age_sentinel(df: pd.DataFrame, name: str) -> tuple:
     n_corrected = int(mask.sum())
     df.loc[mask, col] = pd.NA
     return df, n_corrected
+
+
+def correct_hours_sentinel(df: pd.DataFrame, name: str) -> tuple:
+    """The second verified auto-correction: 99 -> NaN in q3_03/q3_05 only
+    (see _HOURS_SENTINEL_COLUMNS for the evidence). Returns
+    (df, {column: n_corrected})."""
+    df = df.copy()
+    corrected = {}
+    for col in _HOURS_SENTINEL_COLUMNS[name]:
+        mask = df[col] == 99
+        corrected[col] = int(mask.sum())
+        df.loc[mask, col] = pd.NA
+    return df, corrected
 
 
 def _build_flags(df: pd.DataFrame, name: str, mask: pd.Series, rule_name: str, detail: pd.Series) -> pd.DataFrame:
@@ -154,6 +176,54 @@ def apply_value_mapping(df: pd.DataFrame, column: str, mapping: dict) -> tuple:
     return df, n_affected
 
 
+def build_consolidation_mapping(near_duplicates: pd.DataFrame, min_similarity: float = 0.98) -> dict:
+    """Cluster near-duplicate free-text values (>= min_similarity) per
+    column with union-find, then map every value in a cluster to the
+    cluster's most frequent value. Returns {column: {from_value: to_value}}.
+
+    0.98 is a conservative, evidence-based threshold (see CLEANING_PLAN.md
+    Part 5 / README): checked the actual pairs at 0.98 by eye -- all typo/
+    spacing/pluralization variants of the same real answer (e.g. "GOLD
+    SMITH" / "GOLDSMITH", "SHOP OWNER" / "SHOPOWNER"), unlike the noisier
+    0.90-0.95 band which mixes in genuinely different short answers."""
+    mappings = {}
+    close_pairs = near_duplicates[near_duplicates["similarity"] >= min_similarity]
+    for column, group in close_pairs.groupby("column"):
+        parent = {}
+
+        def find(x):
+            while parent.get(x, x) != x:
+                x = parent[x]
+            return x
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[ra] = rb
+
+        counts = {}
+        for _, row in group.iterrows():
+            parent.setdefault(row["value_a"], row["value_a"])
+            parent.setdefault(row["value_b"], row["value_b"])
+            counts[row["value_a"]] = row["count_a"]
+            counts[row["value_b"]] = row["count_b"]
+            union(row["value_a"], row["value_b"])
+
+        clusters = {}
+        for value in parent:
+            clusters.setdefault(find(value), []).append(value)
+
+        column_mapping = {}
+        for members in clusters.values():
+            canonical = max(members, key=lambda v: (counts.get(v, 0), v))
+            for member in members:
+                if member != canonical:
+                    column_mapping[member] = canonical
+        if column_mapping:
+            mappings[column] = column_mapping
+    return mappings
+
+
 @lru_cache(maxsize=1)
 def _load_isic_division_to_section() -> dict:
     """Division (int 1-99) -> section letter, read from the official ISIC
@@ -249,6 +319,10 @@ def clean_dataset(name: str, datasets: dict) -> Path:
     df, n_age_corrected = correct_age_sentinel(df, name)
     log_lines.append(f"Age sentinel (-1) corrected to NaN in {_AGE_COLUMNS[name]}: {n_age_corrected}")
 
+    df, hours_corrected = correct_hours_sentinel(df, name)
+    for col, n in hours_corrected.items():
+        log_lines.append(f"Hours sentinel (99) corrected to NaN in {col}: {n}")
+
     flagged = apply_validation_rules(df, name)
     n_flagged_rows = flagged[["hhid", "id2"]].drop_duplicates().shape[0] if len(flagged) else 0
     log_lines.append(
@@ -258,9 +332,21 @@ def clean_dataset(name: str, datasets: dict) -> Path:
 
     for column, mapping in config.VALUE_MAPPINGS.get(name, {}).items():
         df, n_mapped = apply_value_mapping(df, column, mapping)
-        log_lines.append(f"Value mapping applied to {column}: {n_mapped} row(s)")
+        log_lines.append(f"Manual value mapping applied to {column}: {n_mapped} row(s)")
     if not config.VALUE_MAPPINGS.get(name):
-        log_lines.append("Value mappings: none defined yet (populated after reviewing near-duplicate candidates)")
+        log_lines.append("Manual value mappings: none defined (config.VALUE_MAPPINGS is empty)")
+
+    if paths["near_duplicates"].exists():
+        near_duplicates = pd.read_csv(paths["near_duplicates"])
+        auto_mapping = build_consolidation_mapping(near_duplicates, min_similarity=0.98)
+        for column, mapping in auto_mapping.items():
+            df, n_mapped = apply_value_mapping(df, column, mapping)
+            log_lines.append(
+                f"Auto-consolidated {column}: {len(mapping)} variant(s) merged into their canonical "
+                f"value (>=0.98 Jaro-Winkler similarity, majority-vote by frequency), {n_mapped} row(s) affected"
+            )
+    else:
+        log_lines.append("Auto-consolidation skipped: run diagnose.py first to generate near-duplicate candidates")
 
     if name == "ind":
         df["isic_section"] = classify_isic_section(df["isic_code"])
@@ -278,9 +364,12 @@ def clean_dataset(name: str, datasets: dict) -> Path:
 
     log_lines.append(f"Rows after: {len(df)}")
 
-    paths["cleaning_log"].write_text("\n".join(log_lines) + "\n", encoding="utf-8")
     flagged.to_csv(paths["flagged_for_review"], index=False)
     df.to_parquet(paths["cleaned"], index=False)
+    df.to_excel(paths["cleaned_xlsx"], index=False, sheet_name=name)
+    log_lines.append(f"Cleaned dataset exported to {paths['cleaned_xlsx'].name}")
+
+    paths["cleaning_log"].write_text("\n".join(log_lines) + "\n", encoding="utf-8")
     print("\n".join(log_lines))
 
     return paths["cleaned"]

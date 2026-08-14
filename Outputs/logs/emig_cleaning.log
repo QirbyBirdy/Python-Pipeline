@@ -3,5 +3,7 @@ Rows before: 659
 Exact-duplicate rows dropped (key=['hhid', 'emig']): 0
 Age sentinel (-1) corrected to NaN in q7_06: 28
 Validation-rule flags: 0 flag(s) across 0 unique row(s), 0 rule(s) -- see emig_flagged_for_review.csv
-Value mappings: none defined yet (populated after reviewing near-duplicate candidates)
+Manual value mappings: none defined (config.VALUE_MAPPINGS is empty)
+Auto-consolidated q7_15: 4 variant(s) merged into their canonical value (>=0.98 Jaro-Winkler similarity, majority-vote by frequency), 4 row(s) affected
 Rows after: 659
+Cleaned dataset exported to emig_cleaned.xlsx

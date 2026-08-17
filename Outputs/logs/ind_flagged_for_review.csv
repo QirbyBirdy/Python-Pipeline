@@ -1,5 +1,4 @@
 hhid,id2,rule_name,detail
-04 1090 202 5,1,usual_hours_mismatch,q3_03+q3_04=14.0 vs q3_05=113.0
 01 0006 084 5,1,monetary_outlier_q6_01,"q6_01=241728.0 outside IQR bounds [-40000, 152000]"
 01 0014 057 7,1,monetary_outlier_q6_01,"q6_01=240000.0 outside IQR bounds [-40000, 152000]"
 01 0049 166 3,1,monetary_outlier_q6_01,"q6_01=300000.0 outside IQR bounds [-40000, 152000]"

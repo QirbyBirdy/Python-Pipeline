@@ -1,10 +1,22 @@
 Cleaning: ind
 Rows before: 13853
 Exact-duplicate rows dropped (key=['hhid', 'member']): 0
+Usual-hours mismatch on RAW data, before any correction: 6 row(s) (diagnostic only -- recompute_derived_hours() below is what fixes q3_05, not this check)
 Age sentinel (-1) corrected to NaN in q1_04: 12
 Hours sentinel (99) corrected to NaN in q3_03: 88
 Hours sentinel (99) corrected to NaN in q3_05: 6
-Validation-rule flags: 584 flag(s) across 509 unique row(s), 19 rule(s) -- see ind_flagged_for_review.csv
+Hours sentinel (-1) corrected to NaN in q3_07_1: 14
+Hours sentinel (-1) corrected to NaN in q3_07_2: 15
+Hours sentinel (-1) corrected to NaN in q3_07_3: 14
+Hours sentinel (-1) corrected to NaN in q3_07_4: 15
+Hours sentinel (-1) corrected to NaN in q3_07_5: 14
+Hours sentinel (-1) corrected to NaN in q3_07_6: 15
+Hours sentinel (-1) corrected to NaN in q3_07_7: 15
+Hours sentinel (-1) corrected to NaN in q3_08: 1
+Recomputed q3_09 from cleaned components: 17 value(s) changed
+Recomputed q3_10 from cleaned components: 3 value(s) changed
+Recomputed q3_05 from cleaned components: 6 value(s) changed
+Validation-rule flags: 583 flag(s) across 509 unique row(s), 18 rule(s) -- see ind_flagged_for_review.csv
 Manual value mappings: none defined (config.VALUE_MAPPINGS is empty)
 Auto-consolidated q2_02: 9 variant(s) merged into their canonical value (>=0.98 Jaro-Winkler similarity, majority-vote by frequency), 9 row(s) affected
 Auto-consolidated q3_15b: 7 variant(s) merged into their canonical value (>=0.98 Jaro-Winkler similarity, majority-vote by frequency), 10 row(s) affected

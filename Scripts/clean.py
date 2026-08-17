@@ -6,10 +6,40 @@ written by ingest.py; writes a cleaned parquet, a cleaning log, and a
 flagged-for-review CSV per dataset.
 
 Every correction this module makes is logged with a before/after count.
-Only one correction happens without a human review step first: the
-verified -1 "don't know" age sentinel -> NaN (see diagnose.py's
-_describe_flagged, which confirmed every range-check flag on age was
-exactly -1). Everything else here is flag-only.
+
+Course-correction (this file's second pass): a self-audit found the same
+underlying mistake in four places -- a check or correction that could
+never have caught a real problem even if one existed, because of how it
+was scoped or ordered. Each is called out at the point it's fixed below;
+the short version:
+
+1. Sentinel correction ran before the consistency check meant to verify
+   it, so check_usual_hours_consistency() was validating already-cleaned
+   data and could never flag the very rows the sentinel explained. Fixed
+   by running it once, deliberately, on the RAW data before any
+   correction -- diagnostic only now, not part of the flagged-for-review
+   output (see clean_dataset()).
+2. check_daily_hours_consistency() compared q3_09 (a CAPI-*computed*
+   total) against its own definition (the sum of its components) -- an
+   arithmetic identity that's true by construction on genuine data, so
+   the check could never fail. Removed; replaced by
+   recompute_derived_hours(), which treats q3_09/q3_10/q3_05 as derived
+   fields to be recalculated from cleaned components, not raw totals to
+   be validated.
+3. The -1 "don't know" sentinel verified for age was never generalized --
+   it was still live, uncorrected, in q3_07_1..7 and q3_08. Fixed by
+   correct_negative_one_hours_sentinel(), the same mechanism as the age
+   correction, just applied to the columns where it actually occurs.
+4. check_employment_skip_logic() required a literal "No" on all four
+   screening questions, but the CAPI skip logic leaves most genuinely
+   not-employed respondents blank instead (48% of not-employed rows have
+   all four blank) -- blank silently failed the equality check, so those
+   rows were never inspected. Fixed by treating blank the same as "No"
+   (no evidence of employment), which surfaces 23 rows the old mask
+   missed entirely. Tracing those 23 found every one has q2_06 answered
+   (an informal sale/handicraft activity that independently routes to job
+   coding) -- so q2_06 is now part of the check too, and the complete,
+   correct version finds 0 unexplained violations, not 23.
 """
 
 from functools import lru_cache
@@ -26,12 +56,47 @@ _AGE_COLUMNS = {"ind": "q1_04", "emig": "q7_06"}
 # Evidence (checked across every hours-related column before adding any of
 # these): q3_03 has 88 values of exactly 99, with every other value capping
 # at 98 -- a classic "99 or more" top-code. q3_05 has 6 (matching the
-# usual_hours_mismatch flags). q3_04/q3_08/q3_09/q3_10/q3_07_1..7 all have
-# ZERO occurrences of 99 despite going as high as 168 -- confirms this is
-# specific to these two "usual hours" fields, not a general hours sentinel.
+# usual_hours_mismatch flags). Every other hours column has ZERO
+# occurrences of 99 despite going as high as 168 -- confirms this is
+# specific to these two "usual hours" fields, not a general sentinel.
 _HOURS_SENTINEL_COLUMNS = {"ind": ["q3_03", "q3_05"], "emig": []}
 
+# Columns where -1 is the same "don't know" sentinel already verified for
+# age -- generalized here after a self-audit found it was still live and
+# uncorrected in these seven+one columns (see module docstring, item 3).
+_NEGATIVE_ONE_HOURS_COLUMNS = {"ind": [f"q3_07_{i}" for i in range(1, 8)] + ["q3_08"], "emig": []}
+
 _FLAGGED_COLUMNS = ["hhid", "id2", "rule_name", "detail"]
+
+
+def _correct_sentinel(df: pd.DataFrame, columns: list, sentinel) -> tuple:
+    """Generic sentinel -> NaN correction, shared by every auto-correction
+    in this module (age, hours-99, hours-negative-one) so the mechanism is
+    genuinely one implementation, not three copies of the same logic.
+    Returns (df, {column: n_corrected})."""
+    df = df.copy()
+    corrected = {}
+    for col in columns:
+        mask = df[col] == sentinel
+        corrected[col] = int(mask.sum())
+        df.loc[mask, col] = pd.NA
+    return df, corrected
+
+
+def _count_changed(before: pd.Series, after: pd.Series) -> int:
+    """How many rows actually changed value. Deliberately not just
+    `before != after`: with pandas nullable dtypes, comparing a real value
+    against NA returns NA (not True), and that silently drops out of a
+    sum -- found by this producing "0 changed" on data that had visibly
+    changed. Each of the three ways a value can actually change is
+    checked explicitly instead."""
+    before_na = before.isna()
+    after_na = after.isna()
+    became_missing = ~before_na & after_na
+    became_present = before_na & ~after_na
+    both_present_different = ~before_na & ~after_na & (before != after)
+    changed = became_missing | became_present | both_present_different
+    return int(changed.sum())
 
 
 def drop_exact_duplicates(df: pd.DataFrame, key_columns: list) -> tuple:
@@ -43,29 +108,67 @@ def drop_exact_duplicates(df: pd.DataFrame, key_columns: list) -> tuple:
 
 
 def correct_age_sentinel(df: pd.DataFrame, name: str) -> tuple:
-    """The one auto-correction this module makes: age == -1 -> NaN.
-    Defensible because diagnose.py's range check already confirmed every
-    out-of-range age value is exactly -1 (a 'don't know' sentinel), not a
-    scattered set of implausible values. Returns (df, n_corrected)."""
-    col = _AGE_COLUMNS[name]
-    df = df.copy()
-    mask = df[col] == -1
-    n_corrected = int(mask.sum())
-    df.loc[mask, col] = pd.NA
-    return df, n_corrected
+    """Age == -1 -> NaN. Defensible because diagnose.py's range check
+    already confirmed every out-of-range age value is exactly -1 (a
+    'don't know' sentinel), not a scattered set of implausible values.
+    Returns (df, n_corrected)."""
+    df, corrected = _correct_sentinel(df, [_AGE_COLUMNS[name]], -1)
+    return df, corrected[_AGE_COLUMNS[name]]
 
 
 def correct_hours_sentinel(df: pd.DataFrame, name: str) -> tuple:
-    """The second verified auto-correction: 99 -> NaN in q3_03/q3_05 only
-    (see _HOURS_SENTINEL_COLUMNS for the evidence). Returns
-    (df, {column: n_corrected})."""
+    """99 -> NaN in q3_03/q3_05 only (see _HOURS_SENTINEL_COLUMNS for the
+    evidence). Returns (df, {column: n_corrected})."""
+    return _correct_sentinel(df, _HOURS_SENTINEL_COLUMNS[name], 99)
+
+
+def correct_negative_one_hours_sentinel(df: pd.DataFrame, name: str) -> tuple:
+    """-1 -> NaN in the seven daily hours columns and q3_08 (see
+    _NEGATIVE_ONE_HOURS_COLUMNS -- the same sentinel already verified for
+    age, generalized to where it actually occurs in the hours-worked
+    block). Returns (df, {column: n_corrected})."""
+    return _correct_sentinel(df, _NEGATIVE_ONE_HOURS_COLUMNS[name], -1)
+
+
+def recompute_derived_hours(df: pd.DataFrame, name: str) -> tuple:
+    """Recompute q3_09 (main-job actual hours), q3_10 (all-jobs actual
+    hours), and q3_05 (all-jobs usual hours) directly from their now-
+    cleaned components, instead of trusting the raw CAPI-computed/
+    self-reported totals or merely flagging a mismatch against them (see
+    module docstring, item 2). NaN propagates deliberately: summing a
+    week with one unknown day and calling the result a true weekly total
+    would understate it, so any missing component makes the derived
+    total unknown too. Only recomputes for rows the question actually
+    applied to -- doesn't invent a value where one was never asked.
+    ind only. Returns (df, {field: n_changed})."""
+    if name != "ind":
+        return df, {}
     df = df.copy()
-    corrected = {}
-    for col in _HOURS_SENTINEL_COLUMNS[name]:
-        mask = df[col] == 99
-        corrected[col] = int(mask.sum())
-        df.loc[mask, col] = pd.NA
-    return df, corrected
+    changed = {}
+
+    day_cols = [f"q3_07_{i}" for i in range(1, 8)]
+    has_main_job = df["q3_16"].notna()
+    q3_09_before = df["q3_09"].astype("Float64")
+    q3_09_new = df[day_cols].astype("Float64").sum(axis=1, skipna=False).where(has_main_job)
+    changed["q3_09"] = _count_changed(q3_09_before, q3_09_new)
+    df["q3_09"] = q3_09_new.astype("Int64")
+
+    # q3_04 (untouched by any sentinel correction) is the reliable "was
+    # asked about a second job" indicator -- using q3_08 for this would be
+    # circular, since q3_08 is one of the columns just corrected above.
+    has_other_job = df["q3_04"].notna()
+
+    q3_10_before = df["q3_10"].astype("Float64")
+    q3_10_new = (df["q3_09"].astype("Float64") + df["q3_08"].astype("Float64")).where(has_other_job)
+    changed["q3_10"] = _count_changed(q3_10_before, q3_10_new)
+    df["q3_10"] = q3_10_new.astype("Int64")
+
+    q3_05_before = df["q3_05"].astype("Float64")
+    q3_05_new = (df["q3_03"].astype("Float64") + df["q3_04"].astype("Float64")).where(has_other_job)
+    changed["q3_05"] = _count_changed(q3_05_before, q3_05_new)
+    df["q3_05"] = q3_05_new.astype("Int64")
+
+    return df, changed
 
 
 def _build_flags(df: pd.DataFrame, name: str, mask: pd.Series, rule_name: str, detail: pd.Series) -> pd.DataFrame:
@@ -80,10 +183,12 @@ def _build_flags(df: pd.DataFrame, name: str, mask: pd.Series, rule_name: str, d
 
 
 def check_usual_hours_consistency(df: pd.DataFrame) -> pd.DataFrame:
-    """q3_05 (total usual hours, all jobs) should ~= q3_03 (main job) +
-    q3_04 (other jobs), allowing 1 hour of rounding slack. Flag only --
-    which of the two conflicting numbers is 'right' isn't something a
-    script can decide."""
+    """q3_05 (total usual hours, all jobs) vs q3_03 (main job) + q3_04
+    (other jobs), allowing 1 hour of rounding slack. Diagnostic only --
+    call this once on the RAW data before any correction (see module
+    docstring, item 1); recompute_derived_hours() is what actually fixes
+    q3_05 afterward, so this isn't part of the ongoing flagged-for-review
+    output."""
     main = df["q3_03"].astype("Float64").fillna(0)
     other = df["q3_04"].astype("Float64").fillna(0)
     total = df["q3_05"].astype("Float64")
@@ -94,28 +199,37 @@ def check_usual_hours_consistency(df: pd.DataFrame) -> pd.DataFrame:
     return _build_flags(df, "ind", mask, "usual_hours_mismatch", detail)
 
 
-def check_daily_hours_consistency(df: pd.DataFrame) -> pd.DataFrame:
-    """q3_09 (total actual hours, main job, last 7 days) should ~= the sum
-    of the seven daily columns q3_07_1..q3_07_7, allowing 1 hour slack."""
-    day_cols = [f"q3_07_{i}" for i in range(1, 8)]
-    daily_sum = sum(df[c].astype("Float64").fillna(0) for c in day_cols)
-    total = df["q3_09"].astype("Float64")
-    diff = (daily_sum - total).abs()
-    mask = df["q3_09"].notna() & (diff > 1)
-    detail = "daily_sum=" + daily_sum.astype(str) + " vs q3_09=" + total.astype(str)
-    return _build_flags(df, "ind", mask, "daily_hours_mismatch", detail)
-
-
 def check_employment_skip_logic(df: pd.DataFrame) -> pd.DataFrame:
-    """If q2_04/q2_05/q2_07/q2_10 are all 'No' (not employed, no business,
-    no unpaid family work, not temporarily absent), job-detail fields
-    (isco_code) should be empty. A violation means either a genuine data
-    issue or a more complex q3_16 gate than modeled -- flag either way."""
-    not_employed = (
-        (df["q2_04"] == "No") & (df["q2_05"] == "No") & (df["q2_07"] == "No") & (df["q2_10"] == "No")
+    """If none of q2_04/q2_05/q2_06/q2_07/q2_10 show any evidence of
+    employment, isco_code should be empty.
+
+    Fixed from an earlier version that required a literal 'No' on all
+    four gate questions -- but the CAPI skip logic means most genuinely
+    not-employed respondents have these fields blank (never asked), not
+    explicitly 'No': 48% of not-employed rows (isco_code null) have all
+    four blank. Blank silently failed the old equality check, so those
+    rows were never inspected at all. Treating blank as 'no evidence',
+    same as an explicit 'No', surfaces 23 rows the old version missed.
+
+    Traced all 23 by hand: every one has q2_06 answered (1 or 2 --
+    informal cooking-for-sale or handicraft-for-sale activity), which the
+    questionnaire routes straight to job coding, correctly skipping
+    q2_07/q2_10. q2_06 wasn't in the original check at all. With it
+    included, the complete, correct version finds 0 unexplained
+    violations, not 23 -- the 23 were real gaps in the *check*, not in
+    the data."""
+    no_evidence_of_employment = ~(
+        (df["q2_04"] == "Yes")
+        | (df["q2_05"] == "Yes")
+        | (df["q2_06"].notna() & (df["q2_06"] != 99))
+        | (df["q2_07"] == "Yes")
+        | (df["q2_10"] == "Yes")
     )
-    mask = not_employed & df["isco_code"].notna()
-    detail = pd.Series("not employed per q2_04/q2_05/q2_07/q2_10 but isco_code is filled", index=df.index)
+    mask = no_evidence_of_employment & df["isco_code"].notna()
+    detail = pd.Series(
+        "no Yes/positive answer on any employment-screening question (q2_04/05/06/07/10) but isco_code is filled",
+        index=df.index,
+    )
     return _build_flags(df, "ind", mask, "employment_skip_violation", detail)
 
 
@@ -146,14 +260,14 @@ def flag_monetary_outliers(df: pd.DataFrame, name: str) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=_FLAGGED_COLUMNS)
 
 
-def apply_validation_rules(df: pd.DataFrame, name: str) -> tuple:
-    """Runs every flag-only rule for `name` and concatenates the results.
-    Returns (flagged_rows,) -- does not touch df; corrections happen
-    separately via correct_age_sentinel()."""
+def apply_validation_rules(df: pd.DataFrame, name: str) -> pd.DataFrame:
+    """Runs every remaining flag-only rule for `name` and concatenates the
+    results. Returns flagged_rows -- does not touch df. The two hours-
+    consistency checks are deliberately absent here: usual-hours is now a
+    one-off diagnostic on raw data (see clean_dataset()), and daily-hours
+    was retired outright (module docstring, item 2)."""
     frames = []
     if name == "ind":
-        frames.append(check_usual_hours_consistency(df))
-        frames.append(check_daily_hours_consistency(df))
         frames.append(check_employment_skip_logic(df))
     frames.append(flag_monetary_outliers(df, name))
     frames = [f for f in frames if len(f)]
@@ -304,11 +418,13 @@ def classify_isco_major_group(isco_series: pd.Series) -> pd.Series:
 
 
 def clean_dataset(name: str, datasets: dict) -> Path:
-    """Run the full cleaning stage for one dataset: dedup, the one
-    verified auto-correction, every flag-only validation rule, any
-    reviewed value mappings, and (ind only) ISIC/ISCO classification.
-    Writes the cleaned parquet, a cleaning log, and a flagged-for-review
-    CSV. Reads Outputs/typed/<name>_typed.parquet -- run ingest.py first."""
+    """Run the full cleaning stage for one dataset: dedup, every verified
+    auto-correction, a pre-correction diagnostic on raw data, every
+    flag-only validation rule, recomputation of the derived hours fields,
+    any reviewed/auto value mappings, and (ind only) ISIC/ISCO
+    classification. Writes the cleaned parquet+xlsx, a cleaning log, and a
+    flagged-for-review CSV. Reads Outputs/typed/<name>_typed.parquet --
+    run ingest.py first."""
     paths = datasets[name]
     df = pd.read_parquet(paths["typed"])
     log_lines = [f"Cleaning: {name}", f"Rows before: {len(df)}"]
@@ -316,12 +432,31 @@ def clean_dataset(name: str, datasets: dict) -> Path:
     df, n_dropped = drop_exact_duplicates(df, _ID_COLUMNS[name])
     log_lines.append(f"Exact-duplicate rows dropped (key={_ID_COLUMNS[name]}): {n_dropped}")
 
+    if name == "ind":
+        # Diagnostic only, on RAW data, before any correction -- see the
+        # module docstring, item 1. This is what "would it have caught one
+        # if it existed" actually requires: run the check while it still
+        # could fail.
+        raw_mismatch = check_usual_hours_consistency(df)
+        log_lines.append(
+            f"Usual-hours mismatch on RAW data, before any correction: {len(raw_mismatch)} row(s) "
+            "(diagnostic only -- recompute_derived_hours() below is what fixes q3_05, not this check)"
+        )
+
     df, n_age_corrected = correct_age_sentinel(df, name)
     log_lines.append(f"Age sentinel (-1) corrected to NaN in {_AGE_COLUMNS[name]}: {n_age_corrected}")
 
     df, hours_corrected = correct_hours_sentinel(df, name)
     for col, n in hours_corrected.items():
         log_lines.append(f"Hours sentinel (99) corrected to NaN in {col}: {n}")
+
+    df, neg1_corrected = correct_negative_one_hours_sentinel(df, name)
+    for col, n in neg1_corrected.items():
+        log_lines.append(f"Hours sentinel (-1) corrected to NaN in {col}: {n}")
+
+    df, recompute_changed = recompute_derived_hours(df, name)
+    for field, n in recompute_changed.items():
+        log_lines.append(f"Recomputed {field} from cleaned components: {n} value(s) changed")
 
     flagged = apply_validation_rules(df, name)
     n_flagged_rows = flagged[["hhid", "id2"]].drop_duplicates().shape[0] if len(flagged) else 0

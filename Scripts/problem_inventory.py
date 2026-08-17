@@ -1,15 +1,16 @@
 """Problem inventory (build brief Step 5): a written list of data-quality
 issues, with counts, for five variables of interest -- sex, age, hours
-worked, ISIC (industry), ISCO (occupation). Read-only: this documents what
-was found in the typed (pre-cleaning) `ind` data; clean.py is what
-actually fixes what's fixable. Every finding here cross-references which
-clean.py stage (if any) addresses it.
+worked, ISIC (industry), ISCO (occupation) -- plus a documented note on
+panelid, a column whose name implies a unique key but isn't one. Read-only:
+this documents what was found in the typed (pre-cleaning) `ind` data;
+clean.py is what actually fixes what's fixable. Every finding here
+cross-references which clean.py stage (if any) addresses it.
 """
 
 import pandas as pd
 
 import config
-from clean import check_daily_hours_consistency, check_usual_hours_consistency
+from clean import check_usual_hours_consistency
 from diagnose import load_typed
 
 
@@ -83,29 +84,68 @@ def inventory_hours(df: pd.DataFrame) -> list:
     usual_mismatch = check_usual_hours_consistency(df)
     findings.append(
         _finding(
-            "Hours worked (q3_03 + q3_04 vs q3_05)",
+            "Hours worked (q3_03 + q3_04 vs q3_05, on RAW data)",
             "Arithmetic mismatch: main-job + other-job hours don't sum to the reported total "
-            "(all cases traced to the q3_05=99 sentinel above, not independent data-entry errors)",
+            "(all 6 cases trace to the q3_05=99 sentinel above -- this check only has power to catch "
+            "them because it runs before that sentinel is corrected, not after)",
             len(usual_mismatch),
             n,
             "Low",
-            "clean.py: check_usual_hours_consistency() -- flagged, resolves once sentinel is corrected",
+            "clean.py: check_usual_hours_consistency() run on raw data (diagnostic) -> "
+            "recompute_derived_hours() recalculates q3_05 from cleaned components",
         )
     )
 
-    daily_mismatch = check_daily_hours_consistency(df)
+    day_cols = [f"q3_07_{i}" for i in range(1, 8)]
+    for col in day_cols + ["q3_08"]:
+        n_neg1 = int((df[col] == -1).sum())
+        findings.append(
+            _finding(
+                f"Hours worked ({col})",
+                "'-1' sentinel (the same 'don't know' placeholder verified for age -- confirmed present "
+                "here too, and had never been corrected before this pass)",
+                n_neg1,
+                n,
+                "Low" if n_neg1 else "None",
+                "clean.py: correct_negative_one_hours_sentinel() -> NaN",
+            )
+        )
+
     findings.append(
         _finding(
-            "Hours worked (daily q3_07_1..7 vs q3_09)",
-            "Arithmetic mismatch: daily hours don't sum to the reported weekly actual-hours total",
-            len(daily_mismatch),
+            "Hours worked (q3_09 main-job actual, q3_10 all-jobs actual, q3_05 all-jobs usual)",
+            "These three are CAPI-computed totals, not independently asked questions -- comparing "
+            "them to the sum of their own components is tautological (true by construction) and "
+            "can never catch a real error. Previously flagged this way (daily q3_07_1..7 vs q3_09); "
+            "retired that check and replaced it with direct recomputation from cleaned components, "
+            "with NaN propagating if any component is unknown",
+            0,
             n,
-            "None" if not len(daily_mismatch) else "Medium",
-            "clean.py: check_daily_hours_consistency() -- flagged only",
+            "None (not a defect -- a check design fix)",
+            "clean.py: recompute_derived_hours() -- recalculates rather than validates",
         )
     )
 
     return findings
+
+
+def inventory_panelid(df: pd.DataFrame) -> list:
+    n = len(df)
+    n_unique = int(df["panelid"].nunique())
+    return [
+        _finding(
+            "panelid",
+            f"Named like a unique respondent ID but is not one -- only {n_unique} distinct values "
+            f"across {n} rows (it's a panel/wave grouping code, not a per-person key). Harmless as "
+            "long as it's left untouched, but would silently produce a many-to-many join and corrupt "
+            "the data if ever used as a merge key",
+            n,
+            n,
+            "None (not currently used as a key) / High if ever used as one",
+            "N/A -- not used anywhere in this pipeline as a join key; documented here so it isn't "
+            "mistaken for one later",
+        )
+    ]
 
 
 def inventory_isic(df: pd.DataFrame) -> list:
@@ -170,7 +210,7 @@ def inventory_isco(df: pd.DataFrame) -> list:
 
 def render_problem_inventory(findings: list) -> str:
     lines = [
-        "# Problem inventory: sex, age, hours worked, industry (ISIC), occupation (ISCO)",
+        "# Problem inventory: sex, age, hours worked, industry (ISIC), occupation (ISCO), panelid",
         "",
         "Read-only findings on the typed (pre-cleaning) `ind` dataset (13,853 rows). "
         "Counts and % are of all rows, not just valid responses, so structural missingness is visible "
@@ -190,16 +230,24 @@ def render_problem_inventory(findings: list) -> str:
         "",
         "- **Sex**: clean. No missingness, no inconsistent coding.",
         "- **Age**: one small, fully-corrected issue (12 rows, a verified `-1` sentinel).",
-        "- **Hours worked**: the most issues of the five, but all trace back to a single root cause -- "
-        "the `99` top-code sentinel in `q3_03`. Once that's corrected, the arithmetic-consistency mismatch "
-        "in `q3_05` resolves on its own (it was never an independent error).",
+        "- **Hours worked**: the most issues of the six, and a self-audit this pass found the original "
+        "checks had a systematic blind spot -- the `99` sentinel (`q3_03`/`q3_05`) is corrected before "
+        "the check that verifies it, so it was run once, deliberately, on raw data instead, and the "
+        "`-1` sentinel proven for age turned out to be live in seven more columns (`q3_07_1..7`, "
+        "`q3_08`) but had never been corrected there. `q3_09`/`q3_10`/`q3_05` are CAPI-computed totals, "
+        "not independent measurements, so validating them against their own components is tautological "
+        "(can never fail) -- they're recomputed from cleaned components instead.",
         "- **Industry (ISIC) / Occupation (ISCO)**: high missingness (65.4%) is entirely structural (the "
         "question only applies to people with a main job) and not a quality problem. The real issue -- "
         "inconsistent leading-zero stripping -- is fully handled by zero-padding before classification; "
         "**0 of 4,789** codes with a value failed to classify.",
-        "- Nothing found across these five variables required a silent correction beyond the two already "
-        "made (age and hours sentinels) -- everything else is either structural (expected, not a defect) "
-        "or already fully resolved by the classification logic.",
+        "- **panelid**: named like a unique respondent ID but has only 18 distinct values across 13,853 "
+        "rows. Not used as a key anywhere in this pipeline, so it's harmless as-is -- documented here so "
+        "it isn't mistaken for a real ID and used as a merge key later.",
+        "- Every correction made (age sentinel, hours-99 sentinel, hours-(-1) sentinel, and the "
+        "q3_09/q3_10/q3_05 recomputation) was made only after checking related columns first, not on a "
+        "guess -- everything else is either structural (expected, not a defect) or already fully "
+        "resolved by the classification logic.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -212,6 +260,7 @@ def build_problem_inventory(datasets: dict) -> str:
         + inventory_hours(df)
         + inventory_isic(df)
         + inventory_isco(df)
+        + inventory_panelid(df)
     )
     report = render_problem_inventory(findings)
     datasets["ind"]["problem_inventory"].write_text(report, encoding="utf-8")

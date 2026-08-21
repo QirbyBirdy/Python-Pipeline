@@ -1,5 +1,7 @@
-"""Path configuration for the GLFS pipeline. All paths used by the pipeline
-scripts (ingest, diagnostics, problem_inventory) are defined here."""
+"""Path configuration for the GLFS pipeline. Every path used by every
+pipeline stage (ingest, diagnose, clean, problem_inventory, impute,
+data_dictionary, export, report, visualize) is defined here, in one place,
+so no stage hardcodes a path of its own."""
 
 from pathlib import Path
 
@@ -14,6 +16,9 @@ DIAGNOSTICS_DIR = OUTPUTS_DIR / "diagnostics"
 PROBLEM_INVENTORY_DIR = OUTPUTS_DIR / "problem_inventory"
 LOGS_DIR = OUTPUTS_DIR / "logs"
 CHARTS_DIR = OUTPUTS_DIR / "charts"
+DATA_DICTIONARY_DIR = OUTPUTS_DIR / "data_dictionary"
+EXPORT_DIR = OUTPUTS_DIR / "export"
+REPORT_DIR = OUTPUTS_DIR / "report"
 
 DATASETS = {
     "ind": {
@@ -23,12 +28,24 @@ DATASETS = {
         "typed": TYPED_DIR / "ind_typed.parquet",
         "cleaned": TYPED_DIR / "ind_cleaned.parquet",
         "cleaned_xlsx": OUTPUTS_DIR / "ind_cleaned.xlsx",
+        "imputed": TYPED_DIR / "ind_imputed.parquet",
         "diagnostics_csv": DIAGNOSTICS_DIR / "ind_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "ind_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "ind_problem_inventory.md",
+        "data_dictionary_csv": DATA_DICTIONARY_DIR / "ind_data_dictionary.csv",
+        "data_dictionary_xlsx": DATA_DICTIONARY_DIR / "ind_data_dictionary.xlsx",
+        "export_parquet": EXPORT_DIR / "ind_final.parquet",
+        "export_xlsx": EXPORT_DIR / "ind_final.xlsx",
+        "export_sav": EXPORT_DIR / "ind_final.sav",
+        "export_dta": EXPORT_DIR / "ind_final.dta",
+        "report_docx": REPORT_DIR / "ind_report.docx",
         "ingest_log": LOGS_DIR / "ind_ingest.log",
         "dtype_log": LOGS_DIR / "ind_dtype_coercion.log",
         "cleaning_log": LOGS_DIR / "ind_cleaning.log",
+        "imputation_log": LOGS_DIR / "ind_imputation.log",
+        "data_dictionary_log": LOGS_DIR / "ind_data_dictionary.log",
+        "export_log": LOGS_DIR / "ind_export.log",
+        "report_log": LOGS_DIR / "ind_report.log",
         "flagged_for_review": LOGS_DIR / "ind_flagged_for_review.csv",
         "near_duplicates": LOGS_DIR / "ind_near_duplicates.csv",
         "casing_check": LOGS_DIR / "ind_casing_consistency.csv",
@@ -40,12 +57,24 @@ DATASETS = {
         "typed": TYPED_DIR / "emig_typed.parquet",
         "cleaned": TYPED_DIR / "emig_cleaned.parquet",
         "cleaned_xlsx": OUTPUTS_DIR / "emig_cleaned.xlsx",
+        "imputed": TYPED_DIR / "emig_imputed.parquet",
         "diagnostics_csv": DIAGNOSTICS_DIR / "emig_diagnostics.csv",
         "diagnostics_report": DIAGNOSTICS_DIR / "emig_report.md",
         "problem_inventory": PROBLEM_INVENTORY_DIR / "emig_problem_inventory.md",
+        "data_dictionary_csv": DATA_DICTIONARY_DIR / "emig_data_dictionary.csv",
+        "data_dictionary_xlsx": DATA_DICTIONARY_DIR / "emig_data_dictionary.xlsx",
+        "export_parquet": EXPORT_DIR / "emig_final.parquet",
+        "export_xlsx": EXPORT_DIR / "emig_final.xlsx",
+        "export_sav": EXPORT_DIR / "emig_final.sav",
+        "export_dta": EXPORT_DIR / "emig_final.dta",
+        "report_docx": REPORT_DIR / "emig_report.docx",
         "ingest_log": LOGS_DIR / "emig_ingest.log",
         "dtype_log": LOGS_DIR / "emig_dtype_coercion.log",
         "cleaning_log": LOGS_DIR / "emig_cleaning.log",
+        "imputation_log": LOGS_DIR / "emig_imputation.log",
+        "data_dictionary_log": LOGS_DIR / "emig_data_dictionary.log",
+        "export_log": LOGS_DIR / "emig_export.log",
+        "report_log": LOGS_DIR / "emig_report.log",
         "flagged_for_review": LOGS_DIR / "emig_flagged_for_review.csv",
         "near_duplicates": LOGS_DIR / "emig_near_duplicates.csv",
         "casing_check": LOGS_DIR / "emig_casing_consistency.csv",
@@ -125,5 +154,5 @@ VALUE_MAPPINGS = {
 ISIC_REFERENCE_CSV = DATA_DIR / "isic-rev4-structure.csv"
 ISCO_REFERENCE_XLSX = DATA_DIR / "isco-08-structure.xlsx"
 
-for _dir in (INTERIM_DIR, TYPED_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR, CHARTS_DIR):
+for _dir in (INTERIM_DIR, TYPED_DIR, DIAGNOSTICS_DIR, PROBLEM_INVENTORY_DIR, LOGS_DIR, CHARTS_DIR, DATA_DICTIONARY_DIR, EXPORT_DIR, REPORT_DIR):
     _dir.mkdir(parents=True, exist_ok=True)

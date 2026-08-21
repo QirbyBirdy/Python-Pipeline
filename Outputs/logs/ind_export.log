@@ -1,0 +1,12 @@
+Export: ind
+Rows: 13853
+Columns: 189
+
+.parquet -> ind_final.parquet
+.xlsx -> ind_final.xlsx (sheets: data, data_dictionary)
+.sav -> ind_final.sav (variable labels: 189, value labels: 10)
+.dta -> ind_final.dta (variable labels: 189, value labels: 10)
+Round-trip check (parquet): shape (13853, 189) vs original (13853, 189) -- OK
+Round-trip check (xlsx): shape (13853, 189) vs original (13853, 189) -- OK
+Round-trip check (sav): shape (13853, 189) vs original (13853, 189) -- OK
+Round-trip check (dta): shape (13853, 189) vs original (13853, 189) -- OK

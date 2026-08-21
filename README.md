@@ -6,9 +6,11 @@ and the household emigration module (`emig`).
 
 ## Status
 
-Project reset back to a basic ingest-only overview, since extended with
-actual dtype conversion, exploratory diagnostics, a problem inventory,
-charts, and a cleaning stage. Current state:
+All ten build steps in the brief's Section 2.1 are implemented, wired into
+a single entry point, and verified end to end from a clean checkout:
+ingest → diagnose → clean → problem inventory → impute → data dictionary →
+export → automated report → charts. Every stage below is real, run, and
+documented with its actual output — nothing here is aspirational.
 
 - `Scripts/config.py` — every path used by the pipeline, in one place, plus
   the skip-gate table, free-text/monetary column lists, and the
@@ -34,19 +36,63 @@ charts, and a cleaning stage. Current state:
   logic, monetary IQR outliers), automatic high-confidence free-text
   consolidation, and ISIC-section / ISCO-major-group classification —
   exports the cleaned dataset as parquet *and* xlsx
+- `Scripts/impute.py` — basic imputation on the cleaned dataset (brief
+  Step 7 / Section 3.3), scoped to the same named variables as the problem
+  inventory: median imputation for age and hours worked, restricted to
+  each variable's actual applicable population; industry/occupation left
+  missing (confirmed structural); every imputed value tracked in a
+  `<column>_imputed` flag column
+- `Scripts/data_dictionary.py` — the data dictionary deliverable (brief
+  Step 8 / Section 4.2): one row per variable, covering every column in
+  the final dataset (not just the cleaning/imputation-scope ones) — type,
+  label, observed value set/range, % missing raw vs. after cleaning,
+  imputation treatment, and notes
+- `Scripts/export.py` — the four-format export deliverable (brief Step 9 /
+  Section 4.1): `.parquet`, `.xlsx` (data + data dictionary sheets),
+  `.sav`, and `.dta` (variable labels on every column, value labels on the
+  ten imputation-flag columns), all written from the final imputed
+  dataset and round-trip-verified after writing
+- `Scripts/report.py` — the automated Word report (brief Step 10 /
+  Section 4.3): a `.docx` per dataset covering all six required sections,
+  with five charts drawn fresh from the final data by this module's own
+  matplotlib code (not copies of visualize.py's JPEGs) — every number in
+  the report is computed at render time, none hand-typed
 - `Scripts/visualize.py` — renders six distributions (sex, age group,
   employment status, ISIC section, ISCO major group, hours worked) as JPEG
   charts
 - `Scripts/run_pipeline.py` — the single command entry point (brief
   Section 2.2.1): runs ingest → diagnose → clean → problem inventory →
-  charts, for both datasets, in that order
+  impute → data dictionary → export → report → charts, for both datasets,
+  in that order
 - `Outputs/` — regenerated end to end by `python Scripts/run_pipeline.py`
 
 See `CLEANING_PLAN.md` for the full design/reasoning behind the cleaning
 stage before it was built, and [Course-correction](#course-correction-self-audit)
 below for a self-audit pass that found and fixed four checks that had lost
-their diagnostic power. Not yet done: automated Word report generation,
-`.sav`/`.dta` export, a formal data dictionary deliverable.
+their diagnostic power. All ten build-brief steps (Section 2.1) are now
+implemented.
+
+### Contents
+
+- [Folder layout](#folder-layout)
+- [Setup](#setup)
+- [Reproduce everything](#reproduce-everything) — start here to regenerate every deliverable from a clean checkout
+- [Running the whole pipeline](#running-the-whole-pipeline)
+- [Running ingest](#running-ingest)
+- [Running diagnostics](#running-diagnostics)
+- [Problem inventory](#problem-inventory)
+- [Running cleaning](#running-cleaning)
+- [Running imputation](#running-imputation)
+- [Running the data dictionary](#running-the-data-dictionary)
+- [Running the export](#running-the-export)
+- [Running the report](#running-the-report)
+- [Course-correction (self-audit)](#course-correction-self-audit)
+- [Charts](#charts)
+- [Metadata-exploration helpers](#metadata-exploration-helpers-scriptsingestpy)
+- [Verifying output](#verifying-output)
+- [Data types: recommended and applied](#data-types-recommended-and-applied)
+- [Diagnostics findings](#diagnostics-findings-from-python-scriptsdiagnosepy)
+- [Keep/drop guidance](#keepdrop-guidance)
 
 ## Folder layout
 
@@ -58,23 +104,77 @@ Scripts/
   diagnose.py                missingness (+structural/incidental) + duplicates + range checks + near-duplicates + casing check + named-variable distributions
   problem_inventory.py        written, counted data-quality findings for sex/age/hours/ISIC/ISCO/panelid
   clean.py                   dedup removal + sentinel corrections + derived-hours recomputation + validation rules (flag/correct) + auto-consolidation + ISIC/ISCO classification + parquet/xlsx export
+  impute.py                   median imputation (age, hours worked) scoped to each variable's applicable population + imputed-flag columns + re-derives hours totals
+  data_dictionary.py          one row per variable (type/label/value set/% missing raw+cleaned/imputation treatment/notes) -> CSV + xlsx
+  export.py                   final dataset -> .parquet + .xlsx (data + dictionary sheets) + .sav + .dta, with variable/value labels, round-trip verified
+  report.py                   automated Word report (.docx) per dataset, 5 fresh matplotlib charts, every figure computed at render time
   visualize.py                renders six distributions as JPEG charts (3 donut, 2 bar, 1 histogram)
   run_pipeline.py              single entry point -- runs every stage above in order
 Outputs/
   interim/                    raw string-typed parquet cache (untouched safety net, gitignored)
-  typed/                      dtype-converted parquet (<name>_typed.parquet) and cleaned parquet (<name>_cleaned.parquet), gitignored
+  typed/                      dtype-converted parquet (<name>_typed.parquet), cleaned parquet (<name>_cleaned.parquet), and imputed parquet (<name>_imputed.parquet), gitignored
   diagnostics/                 diagnostics report (.md) + missingness table (.csv) per dataset
   problem_inventory/           problem inventory report (.md)
+  data_dictionary/             data dictionary (.csv + .xlsx) per dataset
+  export/                     the four required formats (.parquet/.xlsx/.sav/.dta) per dataset -- the actual Section 4.1 deliverable
+  report/                     the automated Word report (.docx) per dataset -- the Section 4.3 deliverable
   charts/                      six distribution charts (.jpg)
-  logs/                       ingest/dtype/cleaning logs, flagged-for-review CSVs, near-duplicate and casing-check CSVs
+  logs/                       ingest/dtype/cleaning/imputation/data-dictionary/export/report logs, flagged-for-review CSVs, near-duplicate and casing-check CSVs
   <name>_cleaned.xlsx          the fully cleaned dataset, one file per dataset (tracked, not gitignored)
 ```
 
 ## Setup
 
+Requires Python 3.10+ (developed and tested on 3.12).
+
 ```bash
 python -m pip install -r requirements.txt
 ```
+
+No other setup — no database, no API keys, no cloud service, no separate
+Quarto/R install. Everything runs locally against the CSVs already in
+`Data/` (brief Section 2.2.2: "locally reproducible... no cloud services,
+no remote databases, no API keys").
+
+## Reproduce everything
+
+The short version, for a reviewer who just wants the outputs:
+
+```bash
+python -m pip install -r requirements.txt
+python Scripts/run_pipeline.py
+```
+
+One command, ~2 minutes (most of it is writing the 189-column `.xlsx`/`.sav`
+exports). No arguments, no manual steps in between, no cell-by-cell
+notebook to babysit — this is the brief's Section 2.2.1 "single-command
+run" requirement.
+
+What you'll have afterward, all under `Outputs/` (see
+[Folder layout](#folder-layout) above for the full map):
+
+| Deliverable | Where | Brief reference |
+| --- | --- | --- |
+| Cleaned + imputed data, 4 formats | `Outputs/export/<name>_final.{parquet,xlsx,sav,dta}` | Section 4.1 |
+| Data dictionary | `Outputs/data_dictionary/<name>_data_dictionary.{csv,xlsx}` | Section 4.2 |
+| Automated Word report | `Outputs/report/<name>_report.docx` | Section 4.3 |
+| Problem inventory | `Outputs/problem_inventory/ind_problem_inventory.md` | Build Step 5 |
+| Diagnostics | `Outputs/diagnostics/<name>_report.md` + `.csv` | Build Step 4 |
+| Charts | `Outputs/charts/*.jpg` | Section 4.3's chart requirements |
+| Every intermediate log | `Outputs/logs/*.log`, `*.csv` | Section 2.2.2 "logged" requirement |
+
+`<name>` is `ind` or `emig` — both tracks run automatically, no flag
+needed. If anything fails partway, it fails loudly with a traceback and a
+stage label (`=== N/9 stage-name ===` printed just before each stage
+starts) rather than continuing on bad data — see
+[Verifying output](#verifying-output) for what a *successful* run's logs
+should say.
+
+To rebuild one stage in isolation while iterating instead of the whole
+pipeline, see that stage's own section below — each one lists its exact
+upstream dependency (e.g. `python Scripts/clean.py` needs `ingest.py` to
+have produced the typed parquet first) and can be run on its own with
+`python Scripts/<stage>.py`.
 
 ## Running the whole pipeline
 
@@ -84,11 +184,12 @@ python Scripts/run_pipeline.py
 
 The single entry point the brief requires (Section 2.2.1: "there must be
 one entry point... that executes every stage in the correct order"). Runs
-ingest → diagnose → clean → problem inventory → charts for both datasets,
-in the order each stage actually depends on the one before it, and
-regenerates everything under `Outputs/`. The per-stage sections below
-document what each step does and how to run it individually while
-iterating.
+ingest (raw caching *and* dtype typing — see [Running ingest](#running-ingest)) →
+diagnose → clean → problem inventory → impute → data dictionary → export →
+report → charts for both datasets, in the order each stage actually
+depends on the one before it, and regenerates everything under `Outputs/`.
+The per-stage sections below document what each step does and how to run
+it individually while iterating.
 
 ## Running ingest
 
@@ -237,8 +338,9 @@ everything with real judgment involved gets flagged instead.
   columns (e.g. "GOLDSMITH"/"GOLD SMITH" → whichever was more common),
   affecting 648 rows total; 4 more in `emig`. Only pairs checked by eye at
   0.98+ and confirmed as unambiguous typo/spacing/pluralization variants —
-  the noisier 0.90–0.97 band stays flag-only in `near_duplicates.csv` for
-  manual review, not auto-merged.
+  the noisier 0.95–0.97 band (everything the near-duplicate detection below
+  finds but doesn't auto-merge) stays flag-only in `near_duplicates.csv`
+  for manual review, not auto-merged.
 - **Casing consistency**: confirmed across *all* 99 `ind` + 13 `emig`
   category columns, not just the spot-checked ones from before — zero
   inconsistencies. The "no code→label mapping needed" finding from the
@@ -290,6 +392,205 @@ silently misclassify — e.g. `"729"` correctly resolves to division 07
 4,789** `ind` rows with a code got a section/major-group classification —
 full coverage, including the one 5-digit anomaly (`"61111"`, likely a
 typo), which best-effort-classifies on its leading digit.
+
+## Running imputation
+
+```bash
+python Scripts/clean.py      # must run first -- impute.py reads the cleaned output
+python Scripts/impute.py
+```
+
+Brief Step 7 / Section 3.3 ("pick the method that fits the variable type
+and the missingness pattern; brief justification is enough"), scoped to
+the same named variables as the problem inventory. Writes
+`Outputs/typed/<name>_imputed.parquet` and
+`Outputs/logs/<name>_imputation.log` (before/after counts and the method
+used for every variable, including the ones deliberately left missing).
+
+Method chosen per variable, checked against the actual cleaned data before
+deciding, not assumed:
+
+- **Age** (`q1_04` `ind` / `q7_06` `emig`) — median. Both numeric with a
+  real right skew after `clean.py`'s `-1` sentinel correction (`ind`: 12
+  missing, mean 30.7 vs. median 26.0, skew 0.52; `emig`: 28 missing, mean
+  39.7 vs. median 38.0, skew 0.29) — the brief calls out median for
+  "numeric variables with skew or outliers."
+- **Hours worked, main job** (`q3_03`) and the **seven daily hours
+  columns** (`q3_07_1..7`) — median, restricted to respondents who
+  actually have a main job (`q3_16` not null): 88 rows for `q3_03`, 14–15
+  per daily column, all genuinely incidental gaps left by `clean.py`'s
+  sentinel corrections.
+- **Hours worked, other job actual** (`q3_08`) — median, restricted to the
+  much narrower population that actually has a second job (`q3_01 ==
+  "Yes"`, n=163). Imputing over the "has a main job" population instead
+  (like `q3_03`) would have manufactured **4,626** fake values for people
+  never asked the question — scoped correctly, only **1** row is
+  genuinely incidental.
+- **Hours worked, other job usual** (`q3_04`) — **left missing**. 100% of
+  its missingness (13,690 of 13,853 rows) is structural, gated by
+  `q3_01 == "Yes"`; confirmed 0 incidental gaps among the 163 rows the
+  question actually applies to.
+- **`q3_05`/`q3_09`/`q3_10`** (all-jobs usual/actual totals) — not
+  independently imputed. These are derived fields; `clean.py`'s
+  `recompute_derived_hours()` is re-run after the base components above
+  are imputed, so the totals reflect the now-more-complete data (`q3_09`:
+  17 rows changed, `q3_10`: 3, `q3_05`: 2) instead of carrying stale `NaN`.
+- **Industry** (`isic_code`) **/ Occupation** (`isco_code`) — **left
+  missing**. Confirmed structural: missingness (9,064 rows) exactly
+  matches the population with no main job. Imputing a job classification
+  for someone never asked about a job would invent data, not fill a gap.
+- **Sex** (`q1_03`) — 0 missing in the cleaned data; nothing to impute.
+
+Every imputed value is tracked in a companion `<column>_imputed` boolean
+column (10 added to `ind`, 1 to `emig`), so the eventual report step can
+chart observed-vs-imputed values (brief Section 4.3) without re-deriving
+which rows were touched. Medians are rounded to the nearest whole number
+before filling — every column imputed here is a whole-number nullable
+`Int8` (years, hours), and an even-count median can otherwise land on a
+`.5` the column's dtype can't hold.
+
+## Running the data dictionary
+
+```bash
+python Scripts/impute.py     # must run first -- data_dictionary.py reads typed/cleaned/imputed
+python Scripts/data_dictionary.py
+```
+
+Brief Step 8 / Section 4.2: "one row per variable: name, type, label,
+valid range or value set, % missing in raw data, % missing after
+cleaning, imputation treatment, notes... included as a sheet in the Excel
+output and also saved as CSV." Writes
+`Outputs/data_dictionary/<name>_data_dictionary.csv` and the same table as
+a single-sheet `<name>_data_dictionary.xlsx` (sheet name
+`data_dictionary`) — the export stage (brief Step 9) will merge this sheet
+into the final combined workbook alongside the data, reusing this same
+function rather than rebuilding it.
+
+Deliberately covers **every** column in the final dataset (189 for `ind`,
+29 for `emig`), not just the five cleaning/imputation-scope variables — a
+reviewer needs to understand the whole exported file, not only the part
+this project's cleaning touched. For the ~180 columns outside that scope,
+the dictionary says so honestly ("Not imputed — outside assigned
+cleaning/imputation scope") rather than inventing a finding; it still
+picks up real, programmatically-verifiable context for free where it
+applies — free-text columns note the auto-consolidation, monetary columns
+note the IQR outlier check, and columns in `config.SKIP_PATTERNS` note
+their structural gate.
+
+"Raw" means `Outputs/typed/<name>_typed.parquet` — right after `ingest.py`'s
+dtype conversion, before `clean.py` has touched a single sentinel value —
+since the true raw CSV (all-string dtype) would give a less meaningful
+type/range reading. Columns `clean.py`/`impute.py` added (the four
+ISIC/ISCO classification columns, the ten `<column>_imputed` flags) didn't
+exist at that point, so their raw-missingness cell reads "N/A (derived
+column)" rather than a fabricated number.
+
+## Running the export
+
+```bash
+python Scripts/data_dictionary.py   # must run first -- export.py reuses its labels + table
+python Scripts/export.py
+```
+
+Brief Step 9 / Section 4.1: "the cleaned dataset must be exported in all
+four formats, with variable labels and value labels preserved where
+supported." Reads `Outputs/typed/<name>_imputed.parquet` — the fully
+cleaned *and* imputed data, since Step 7 (impute) runs before Step 9
+(export) in the brief's own build order; Section 4.1's "cleaned dataset"
+phrase is read here as "the final processed dataset," not a pre-imputation
+snapshot. Writes to `Outputs/export/<name>_final.<ext>`:
+
+- **`.parquet`** — `pandas.to_parquet()`, no conversion needed.
+- **`.xlsx`** — data on one sheet, the data dictionary on a second (per
+  the brief's Table 4), via `data_dictionary.build_dictionary()` rather
+  than a second copy of that logic.
+- **`.sav` / `.dta`** — `pyreadstat`. Verified by round-tripping a sample
+  first rather than assuming: every pandas nullable dtype this pipeline
+  uses (`Int8`/`16`/`32`/`64`, `boolean`, `category`, `string`) is handled
+  correctly on its own — nullable integers become `float64` with real
+  `NaN` preserved; category/string columns keep their text, with missing
+  values round-tripping as an empty string rather than `NaN` (the standard
+  SPSS/Stata convention for missing string data, not a defect introduced
+  here). Stata version is left at `pyreadstat`'s default of 15, matching
+  the brief's own "Stata v15+ recommended for Unicode."
+
+**Variable labels** are attached to all 189 (`ind`) / 29 (`emig`) columns,
+reusing `data_dictionary.column_labels()` — the exact same labels
+documented in the data dictionary, not a second copy that could drift
+from it.
+
+**Value labels** are a numeric-variable-only feature in both formats.
+This dataset's categorical columns already store resolved label *text*,
+not numeric codes — confirmed back in the diagnostics stage (the source
+dictionaries only name a Stata label-*set*, e.g. `"yesno"`; the exported
+values are already `"Male"`/`"Female"`, never a code needing a lookup) —
+so there is no code → label mapping to preserve for them. The one place
+this genuinely applies: the ten (`ind`) / one (`emig`) `<column>_imputed`
+flag columns, recoded from `True`/`False` to `1`/`0` specifically so a
+real value-label pair can be attached (`{0: "Not imputed", 1: "Imputed"}`)
+— a plain boolean column can't carry a value label in either format.
+
+**Verified**: every format is read back immediately after writing and its
+shape checked against the source dataframe (`Outputs/logs/<name>_export.log`);
+`.sav`/`.dta` metadata was additionally spot-checked by hand — `q1_04`'s
+label round-trips as `"Age"`, and `q1_04_imputed`'s value labels round-trip
+as `{0: "Not imputed", 1: "Imputed"}` in both formats.
+
+## Running the report
+
+```bash
+python Scripts/export.py    # must run first -- report.py reads typed/cleaned/imputed
+python Scripts/report.py
+```
+
+Brief Step 10 / Section 4.3: an automated Word report, rendered by the
+pipeline itself, "no manual copy-paste of figures or numbers." Writes
+`Outputs/report/<name>_report.docx` with all six required sections:
+
+1. **Dataset overview** — source, size, variable scope, and the raw CSV's
+   first git-commit date (queried live via `git log`, not hand-typed —
+   there is no separate download timestamp to log).
+2. **Data quality diagnostics (before cleaning)** — every count in the
+   bullet list and the missingness-overview chart is recomputed from
+   `Outputs/typed/<name>_typed.parquet` at render time.
+3. **Cleaning decisions** — a table built by re-running the same
+   `clean.py` functions used in the real cleaning stage
+   (`flag_monetary_outliers()`, `check_employment_skip_logic()`) rather
+   than re-deriving the logic a second time or hardcoding last-run's
+   numbers.
+4. **Imputation applied** — reuses `impute.py`'s `<column>_imputed` flag
+   columns; the "applicable population" per variable is generated from a
+   small classifier, not a copy-pasted sentence repeated for every row.
+5. **Post-cleaning summary** — final row/column counts, summary
+   statistics, and two distribution charts (age, hours worked).
+6. **A chart that tells a story** — employment status (`ind`) / most
+   important reason for emigrating (`emig`), a genuinely substantive
+   categorical breakdown, not a repeat of an earlier chart.
+7. **Limitations and known risks** — the same honest scope boundaries
+   documented throughout this README (bounded `SKIP_PATTERNS` coverage,
+   `>=0.98`-only auto-consolidation, median-only imputation, IQR-flagged
+   monetary fields, `panelid`'s misleading name).
+
+**Charts**: five per report (missingness before/after, observed-vs-imputed
+for one imputed variable, two numeric distributions, one categorical
+"chart of choice") — all five drawn by this module's own matplotlib code
+against the final data, satisfying the brief's "charts must be reproduced
+directly from the cleaned dataset by the rendering step itself... pasted
+static images do not count." Reuses `visualize.py`'s already-validated
+palette (dataviz skill) for a consistent theme rather than picking new
+colors.
+
+**python-docx over Quarto**: this project has used python-docx throughout
+(the three weekly reports); there is no existing Quarto/Jupyter setup to
+add, and the brief lists python-docx as an equally acceptable option.
+
+**Rendered and looked at, not just run**: the first version had a legend
+overlapping a bar on the single-variable `emig` chart, a repeated
+boilerplate sentence copy-pasted across ten table rows, an un-substituted
+`<name>` placeholder, and two evidence numbers ("0 of 4,789...", "see the
+log file") that were typed by hand instead of computed — all four were
+only caught by exporting the actual `.docx` to PDF and inspecting every
+page, not by reading the code.
 
 ## Course-correction (self-audit)
 
@@ -549,8 +850,16 @@ What that leaves to decide:
 - **Keep, core content**: every coded (`category`) and numeric response
   column — this is the actual labor force data the survey exists to collect.
 - **Keep but deprioritize**: the free-text fields listed above.
-- **Scope-dependent**: don't drop or expand beyond whatever specific
-  variables the evaluating office assigns for the cleaning phase (not yet
-  received — flagged as an open item). Use `get_fields`/`recommend_dtypes`
-  to explore the full set now; the real keep/drop decision for *cleaning
-  effort* happens once that scope arrives.
+- **Scope-dependent**: this project treated sex (`q1_03`), age (`q1_04`/
+  `q7_06`), hours worked (`q3_03` and related columns), industry
+  (`isic_code`), and occupation (`isco_code`) as the working cleaning/
+  imputation scope throughout — the same five named variables
+  `problem_inventory.py` documents findings for. No separate scope
+  assignment arrived from the evaluating office during this build; if one
+  ever does and it differs, `config.py`'s column lists
+  (`SKIP_PATTERNS`/`FREE_TEXT_COLUMNS`/`MONETARY_COLUMNS`) and the hardcoded
+  variable names in `clean.py`/`impute.py`/`problem_inventory.py` are the
+  places to re-scope. Every other column stays fully documented (use
+  `get_fields`/`recommend_dtypes`, or just read
+  `Outputs/data_dictionary/<name>_data_dictionary.csv`) but untouched by
+  cleaning.

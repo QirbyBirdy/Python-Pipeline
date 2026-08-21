@@ -299,7 +299,9 @@ def build_consolidation_mapping(near_duplicates: pd.DataFrame, min_similarity: f
     Part 5 / README): checked the actual pairs at 0.98 by eye -- all typo/
     spacing/pluralization variants of the same real answer (e.g. "GOLD
     SMITH" / "GOLDSMITH", "SHOP OWNER" / "SHOPOWNER"), unlike the noisier
-    0.90-0.95 band which mixes in genuinely different short answers."""
+    0.95-0.97 band (everything diagnose.py's near-duplicate detection finds
+    but this doesn't auto-merge) which mixes in genuinely different short
+    answers."""
     mappings = {}
     close_pairs = near_duplicates[near_duplicates["similarity"] >= min_similarity]
     for column, group in close_pairs.groupby("column"):

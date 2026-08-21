@@ -372,11 +372,11 @@ def diagnose_ind(datasets: dict) -> dict:
     if len(near_duplicates):
         recommendations.append(
             f"{len(near_duplicates)} near-duplicate value pair(s) found across the free-text columns "
-            f"(Jaro-Winkler >= 0.90) -- see {paths['near_duplicates'].name} for manual review before building "
+            f"(Jaro-Winkler >= 0.95) -- see {paths['near_duplicates'].name} for manual review before building "
             "any value-consolidation mapping."
         )
     else:
-        recommendations.append("No near-duplicate free-text values found at the 0.90 similarity threshold.")
+        recommendations.append("No near-duplicate free-text values found at the 0.95 similarity threshold.")
 
     n_inconsistent_casing = int((~casing_results["casing_consistent"]).sum())
     if n_inconsistent_casing:
@@ -461,7 +461,7 @@ def diagnose_emig(datasets: dict) -> dict:
             f"{paths['near_duplicates'].name} for manual review."
         )
     else:
-        recommendations.append("No near-duplicate free-text values found at the 0.90 similarity threshold.")
+        recommendations.append("No near-duplicate free-text values found at the 0.95 similarity threshold.")
 
     n_inconsistent_casing = int((~casing_results["casing_consistent"]).sum())
     if n_inconsistent_casing:

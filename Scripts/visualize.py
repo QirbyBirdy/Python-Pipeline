@@ -131,7 +131,7 @@ def plot_donut(
     plt.close(fig)
 
 
-def plot_bar(table: pd.DataFrame, title: str, out_path, xlabel: str = "") -> None:
+def plot_bar(table: pd.DataFrame, title: str, out_path) -> None:
     """Horizontal single-hue bar chart for a value_counts_labeled()-shaped
     table with too many categories for a donut. The dataviz skill's
     series-count ladder caps meaningful multi-color categorical identity

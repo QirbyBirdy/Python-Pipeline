@@ -1,0 +1,22 @@
+Imputation: ind
+Rows: 13853
+
+Age (q1_04): median imputation, 12 row(s) filled with 26
+Hours worked, main job (q3_03): median imputation, 88 row(s) filled with 40
+Hours worked, daily main job (q3_07_1): median imputation, 14 row(s) filled with 8
+Hours worked, daily main job (q3_07_2): median imputation, 15 row(s) filled with 8
+Hours worked, daily main job (q3_07_3): median imputation, 14 row(s) filled with 8
+Hours worked, daily main job (q3_07_4): median imputation, 15 row(s) filled with 8
+Hours worked, daily main job (q3_07_5): median imputation, 14 row(s) filled with 8
+Hours worked, daily main job (q3_07_6): median imputation, 15 row(s) filled with 4
+Hours worked, daily main job (q3_07_7): median imputation, 15 row(s) filled with 0
+Hours worked, other job actual (q3_08): median imputation, 1 row(s) filled with 10
+Hours worked, other job usual (q3_04): LEFT MISSING -- 13690 missing total, 0 of those among the 163 rows the question actually applies to (100% structural, gated by q3_01 == 'Yes'); nothing incidental to impute
+Re-derived q3_09 from imputed components: 17 value(s) changed
+Re-derived q3_10 from imputed components: 3 value(s) changed
+Re-derived q3_05 from imputed components: 2 value(s) changed
+Industry (isic_code): LEFT MISSING -- 9064 missing, exactly matches the 9064 rows with no main job (fully structural, confirmed in problem_inventory.py); imputing a job classification for people never asked about a job would invent data
+Occupation (isco_code): LEFT MISSING -- 9064 missing, same structural pattern as isic_code
+Sex (q1_03): 0 missing -- nothing to impute
+
+Imputed dataset written to ind_imputed.parquet

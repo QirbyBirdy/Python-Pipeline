@@ -1,0 +1,12 @@
+Export: emig
+Rows: 659
+Columns: 29
+
+.parquet -> emig_final.parquet
+.xlsx -> emig_final.xlsx (sheets: data, data_dictionary)
+.sav -> emig_final.sav (variable labels: 29, value labels: 1)
+.dta -> emig_final.dta (variable labels: 29, value labels: 1)
+Round-trip check (parquet): shape (659, 29) vs original (659, 29) -- OK
+Round-trip check (xlsx): shape (659, 29) vs original (659, 29) -- OK
+Round-trip check (sav): shape (659, 29) vs original (659, 29) -- OK
+Round-trip check (dta): shape (659, 29) vs original (659, 29) -- OK
